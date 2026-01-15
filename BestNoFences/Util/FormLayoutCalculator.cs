@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 
+/// <summary>
+/// Calculate the size of the rectangular grid according to the number of windows and return it.
+/// </summary>
 public class FormLayoutCalculator
 {
     public static List<Rectangle> CalculateLayout(int formCount, Rectangle screenWorkingArea, bool preferMoreRows = false)

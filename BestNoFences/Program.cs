@@ -97,7 +97,14 @@ namespace Fenceless
                             contextMenu.Items.Add(settingsMenuItem);
                             
                             contextMenu.Items.Add(new ToolStripSeparator());
-                            
+
+                            // Add auto size ment item
+                            var autoSizeFences = new ToolStripMenuItem("Auto Size");
+                            autoSizeFences.Click += (s, e) => FenceManager.Instance.SizeAllFence();
+                            contextMenu.Items.Add(autoSizeFences);
+
+                            contextMenu.Items.Add(new ToolStripSeparator());
+
                             // Add Start with Windows checkbox
                             var startWithWindowsMenuItem = new ToolStripMenuItem("Start with Windows");
                             startWithWindowsMenuItem.CheckOnClick = true;

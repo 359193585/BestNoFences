@@ -613,27 +613,14 @@ namespace Fenceless
         }
         private void HandleDisplayChangeGrid(int newScreenWidth, int newScreenHeight)
         {
-            // make sure desktop icons are arranged to left win10/11  not doing it properly
-            DesktopIconManager.ArrangeIconsToLeft();
-            // get usable screen area
-            Rectangle usableArea = DesktopIconManager.GetUsableScreenArea();
-            // calculate new layout by number of open forms
-            int myFormCount = Application.OpenForms.Count;
-            List<Rectangle> layoutResult = FormLayoutCalculator.CalculateLayoutOnPrimaryScreen(myFormCount, usableArea,preferMoreRows: false);
-           
-            int kk = 0;
-            foreach (Form f in Application.OpenForms)
-            {
-                f.Left = layoutResult[kk].Left;
-                f.Top = layoutResult[kk].Top;
-                f.Width = layoutResult[kk].Width;
-                f.Height = layoutResult[kk].Height;
-                kk++;
-            }
+            // Resize all fences
+            FenceManager.Instance.SizeAllFence();
             // sure position is in screen bounds
-            EnsureFenceVisible(); 
+            EnsureFenceVisible();
         }
-       
+
+      
+
         protected override void WndProc(ref Message m)
         {
             const uint HideWindowFlag = 0x0080;
