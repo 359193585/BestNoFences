@@ -399,6 +399,16 @@ namespace Fenceless.Model
 
         public void ShowGlobalSettings()
         {
+            string formName = "FencesSetting";
+            foreach (Form form in Application.OpenForms)
+            {
+                if (form.Name == formName)
+                {
+                    form.Activate();
+                    form.WindowState = FormWindowState.Normal;
+                    return;
+                }
+            }
             try
             {
                 logger.Debug("Opening global settings dialog", "FenceManager");

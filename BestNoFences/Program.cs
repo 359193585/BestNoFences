@@ -34,16 +34,14 @@ namespace Fenceless
                 // Load settings to configure logging properly
                 var settings = AppSettings.Instance;
                 
-                logger.Info("Fenceless application starting...", "Main");
+                logger.Info("####    Fenceless application starting...", "Main");
 
-                // Check using Codeberg api if a new release is available (https://codeberg.org/Wavestorm/Fenceless/releases)
-                _ = Task.Run(CheckForUpdatesAsync);
 
                 //allows the context menu to be in dark mode
                 //inherits from the system settings
                 WindowUtil.SetPreferredAppMode(1);
 
-                using (var mutex = new Mutex(true, "fenceless", out var createdNew))
+                using (var mutex = new Mutex(true, "BettetNoFences", out var createdNew))
                 {
                     if (createdNew)
                     {
@@ -71,6 +69,7 @@ namespace Fenceless
                             trayIcon.Text = "Fenceless - Desktop organization tool";
 
                             var contextMenu = new ContextMenuStrip();
+# region Init right-click pop-up menus for taskbar icon
 
                             // Add Fence menu item with sub menu for fence type
                             var addFenceMenuItem = new ToolStripMenuItem("Add Fence");
@@ -96,14 +95,14 @@ namespace Fenceless
                             settingsMenuItem.Click += (s, e) => FenceManager.Instance.ShowGlobalSettings();
                             contextMenu.Items.Add(settingsMenuItem);
                             
-                            contextMenu.Items.Add(new ToolStripSeparator());
+                            contextMenu.Items.Add(new ToolStripSeparator()); // -----------------
 
                             // Add auto size ment item
                             var autoSizeFences = new ToolStripMenuItem("Auto Size");
                             autoSizeFences.Click += (s, e) => FenceManager.Instance.SizeAllFence();
                             contextMenu.Items.Add(autoSizeFences);
 
-                            contextMenu.Items.Add(new ToolStripSeparator());
+                            contextMenu.Items.Add(new ToolStripSeparator()); // -----------------
 
                             // Add Start with Windows checkbox
                             var startWithWindowsMenuItem = new ToolStripMenuItem("Start with Windows");
@@ -171,6 +170,7 @@ namespace Fenceless
                                 Application.Exit();
                             };
                             contextMenu.Items.Add(exitMenuItem);
+                            #endregion
                             trayIcon.ContextMenuStrip = contextMenu;
 
                             trayIcon.DoubleClick += (s, e) =>
@@ -179,6 +179,7 @@ namespace Fenceless
                                 FenceManager.Instance.ShowGlobalSettings();
                             };
 
+                            // load fences
                             try
                             {
                                 logger.Info("Loading fences...", "Main");
@@ -206,17 +207,20 @@ namespace Fenceless
                     }
                     else
                     {
-                        logger.Warning("Another instance of Fenceless is already running", "Main");
-                        MessageBox.Show("Fenceless is already running.", "Fenceless", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        logger.Warning("Another instance of BetterNoFences is already running", "Main");
+                        MessageBox.Show("BetterNoFences is already running.", "BetterNoFences", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                 }
+
+                // Check  if a new release is available 
+                _ = Task.Run(UpdateNotication.CheckForUpdatesAsync);
             }
             catch (Exception ex)
             {
                 if (logger != null)
                     logger.Critical("Critical error in main application", "Main", ex);
                 else
-                    System.Diagnostics.Debug.WriteLine($"Critical error: {ex}");
+                    Debug.WriteLine($"Critical error: {ex}");
                 
                 MessageBox.Show($"Critical application error: {ex.Message}\n\nPlease check the log files for more details.", "Critical Error", 
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -247,164 +251,6 @@ namespace Fenceless
                 MessageBox.Show(
                     $"A critical error occurred and the application must close:\n{e.ExceptionObject}\n\nPlease check the log files for more details.",
                     "Critical Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private static async Task CheckForUpdatesAsync()
-        {
-            try
-            {
-                if (logger == null)
-                {
-                    return; // Logger not initialized yet
-                }
-                
-                logger.Info("Checking for updates...", "CheckForUpdates");
-                
-                using (var httpClient = new HttpClient())
-                {
-                    httpClient.DefaultRequestHeaders.Add("User-Agent", "Fenceless-UpdateChecker");
-                    
-                    // Get all releases from Codeberg API
-                    var response = await httpClient.GetStringAsync("https://codeberg.org/api/v1/repos/Wavestorm/Fenceless/releases");
-                    
-                    if (string.IsNullOrEmpty(response))
-                    {
-                        logger?.Warning("Empty response from Codeberg API", "CheckForUpdates");
-                        return;
-                    }
-                    
-                    var releasesArray = JArray.Parse(response);
-                    
-                    if (releasesArray == null || releasesArray.Count == 0)
-                    {
-                        logger?.Info("No releases found on Codeberg", "CheckForUpdates");
-                        return;
-                    }
-                    
-                    // Find the latest non-prerelease version
-                    JObject latestRelease = null;
-                    foreach (var release in releasesArray)
-                    {
-                        if (release == null) continue;
-                        
-                        var isPrerelease = release["prerelease"]?.Value<bool>() ?? false;
-                        var isDraft = release["draft"]?.Value<bool>() ?? false;
-                        
-                        if (!isPrerelease && !isDraft)
-                        {
-                            latestRelease = (JObject)release;
-                            break; // Releases are typically ordered by date, so first non-prerelease is latest
-                        }
-                    }
-                    
-                    // If no stable release found, use the first release (even if prerelease)
-                    if (latestRelease == null && releasesArray.Count > 0)
-                    {
-                        latestRelease = (JObject)releasesArray[0];
-                        logger?.Info("No stable release found, using latest prerelease", "CheckForUpdates");
-                    }
-                    
-                    if (latestRelease == null)
-                    {
-                        logger?.Warning("Could not find any suitable release", "CheckForUpdates");
-                        return;
-                    }
-                    
-                    var latestVersion = latestRelease["tag_name"]?.ToString();
-                    if (string.IsNullOrEmpty(latestVersion))
-                    {
-                        logger?.Warning("Could not parse latest version from API response", "CheckForUpdates");
-                        return;
-                    }
-                    
-                    // Remove 'v' prefix if present
-                    if (latestVersion.StartsWith("v"))
-                        latestVersion = latestVersion.Substring(1);
-                    
-                    // Get current version from assembly
-                    var assembly = Assembly.GetExecutingAssembly();
-                    if (assembly?.GetName()?.Version == null)
-                    {
-                        logger?.Warning("Could not get current assembly version", "CheckForUpdates");
-                        return;
-                    }
-                    
-                    var currentVersion = assembly.GetName().Version.ToString();
-                    
-                    logger?.Info($"Current version: {currentVersion}, Latest version: {latestVersion}", "CheckForUpdates");
-                    
-                    // Compare versions
-                    if (IsNewerVersion(latestVersion, currentVersion))
-                    {
-                        logger?.Info("New version available, showing update notification", "CheckForUpdates");
-                        ShowUpdateNotification(latestVersion);
-                    }
-                    else
-                    {
-                        logger?.Info("Application is up to date", "CheckForUpdates");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                logger?.Error($"Error checking for updates: {ex.Message}", "CheckForUpdates");
-            }
-        }
-        
-        private static bool IsNewerVersion(string latestVersion, string currentVersion)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(latestVersion) || string.IsNullOrEmpty(currentVersion))
-                {
-                    logger?.Warning("Invalid version strings for comparison", "IsNewerVersion");
-                    return false;
-                }
-                
-                var latest = new Version(latestVersion);
-                var current = new Version(currentVersion);
-                return latest > current;
-            }
-            catch (Exception ex)
-            {
-                logger?.Error($"Error comparing versions: {ex.Message}", "IsNewerVersion");
-                return false;
-            }
-        }
-        
-        private static void ShowUpdateNotification(string newVersion)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(newVersion))
-                {
-                    logger?.Warning("Cannot show update notification with empty version", "ShowUpdateNotification");
-                    return;
-                }
-                
-                var assembly = Assembly.GetExecutingAssembly();
-                var currentVersionString = assembly?.GetName()?.Version?.ToString() ?? "Unknown";
-                
-                var result = MessageBox.Show(
-                    $"A new version of Fenceless is available!\n\nCurrent version: {currentVersionString}\nNew version: {newVersion}\n\nWould you like to visit the releases page to download the update?",
-                    "Update Available",
-                    MessageBoxButtons.OKCancel,
-                    MessageBoxIcon.Information
-                );
-                
-                if (result == DialogResult.OK)
-                {
-                    Process.Start(new ProcessStartInfo
-                    {
-                        FileName = "https://codeberg.org/Wavestorm/Fenceless/releases",
-                        UseShellExecute = true
-                    });
-                }
-            }
-            catch (Exception ex)
-            {
-                logger?.Error($"Error showing update notification: {ex.Message}", "ShowUpdateNotification");
             }
         }
 
@@ -456,7 +302,7 @@ namespace Fenceless
                 if (logger != null)
                     logger.Error("Error during application exit", "Main", ex);
                 else
-                    System.Diagnostics.Debug.WriteLine($"Error during application exit: {ex.Message}");
+                    Debug.WriteLine($"Error during application exit: {ex.Message}");
             }
         }
     }

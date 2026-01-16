@@ -18,6 +18,7 @@ namespace Fenceless.UI
         private List<FenceInfo> fenceInfos;
         private FenceInfo selectedFenceInfo;
         private bool isUpdatingControls = false;
+        private int[] savedCustomColors = new int[16] { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 };
 
         public SettingsForm()
         {
@@ -34,6 +35,7 @@ namespace Fenceless.UI
             this.SuspendLayout();
 
             // Form setup
+            this.Name = "FencesSetting";
             this.Text = "Fenceless Settings";
             this.Size = new Size(1200, 700);
             this.MaximizeBox = true;
@@ -782,27 +784,27 @@ namespace Fenceless.UI
             {
                 Text = labelText,
                 Location = new Point(x, y + 3),
-                Size = new Size(130, 20)
+                Size = new Size(120, 20)
             };
 
             colorButton = new DarkButton
             {
                 Text = "Choose Color",
-                Location = new Point(x + 140, y),
-                Size = new Size(120, 23)
+                Location = new Point(x + 130, y),
+                Size = new Size(110, 23)
             };
 
             var transparencyLabel = new DarkLabel
             {
-                Text = "Transparency (%):",
-                Location = new Point(x + 270, y + 3),
-                Size = new Size(100, 20)
+                Text = "Transparency(%):",
+                Location = new Point(x + 250, y + 3),
+                Size = new Size(115, 20)
             };
 
             transparencyUpDown = new DarkNumericUpDown
             {
-                Location = new Point(x + 380, y),
-                Width = 60,
+                Location = new Point(x + 375, y),
+                Width = 55,
                 Minimum = 0,
                 Maximum = 100
             };
@@ -1042,11 +1044,21 @@ namespace Fenceless.UI
             using (var colorDialog = new ColorDialog())
             {
                 colorDialog.FullOpen = true;
-
+                // add init color
+                try
+                {
+                    string hexColor = button.Text;
+                    Color initialColor = ColorTranslator.FromHtml(hexColor);
+                    colorDialog.Color = initialColor;
+                }
+                catch { }
+                colorDialog.AllowFullOpen = true;
+                colorDialog.FullOpen = true;
+                colorDialog.CustomColors = savedCustomColors;
                 if (colorDialog.ShowDialog(this) == DialogResult.OK)
                 {
                     SetColorButton(button, colorDialog.Color.ToArgb());
-
+                    savedCustomColors = colorDialog.CustomColors;
                     if (isFenceProperty)
                     {
                         ApplyFenceSettings();
@@ -1057,6 +1069,7 @@ namespace Fenceless.UI
                     }
                 }
             }
+
         }
 
         private void SetColorButton(DarkButton button, int argbColor)
