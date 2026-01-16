@@ -92,10 +92,10 @@ public static class DesktopIconManager
 
         Size iconSize = GetDesktopIconSize();
         Size iconSpaceSize = GetDesktopIconSpacing();
-        int iconsPerColumn = screenArea.Height/ (iconSize.Height + iconSpaceSize.Height);
+        int iconsPerColumn = screenArea.Height/ (iconSpaceSize.Height);
 
         int needCol = (iconCount + iconsPerColumn - 1) / iconsPerColumn;
-        int areaWidth = (iconSize.Width + iconSpaceSize.Width) * needCol; 
+        int areaWidth = (iconSpaceSize.Width) * needCol; 
 
         return new Rectangle(screenArea.Left, screenArea.Top, areaWidth, screenArea.Height);
     }
