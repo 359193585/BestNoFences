@@ -17,6 +17,9 @@ namespace Fenceless.Model
         public int AutoSaveInterval { get; set; } = 30; // seconds
         public bool ShowTooltips { get; set; } = true;
         public bool EnableAnimations { get; set; } = true;
+        public int DefaultFencePosX { get; set; } = 100;
+        public int DefaultFencePosY { get; set; } = 250;
+        
         public int DefaultFenceWidth { get; set; } = 524;
         public int DefaultFenceHeight { get; set; } = 517;
 

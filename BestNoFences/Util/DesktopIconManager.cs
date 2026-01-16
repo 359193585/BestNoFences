@@ -17,10 +17,21 @@ public static class DesktopIconManager
     [DllImport("user32.dll")]
     private static extern int GetSystemMetrics(int nIndex);
 
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetDesktopWindow();
+
+    private const int SM_CXICON = 11;
+    private const int SM_CYICON = 12;
+    private const int LVM_FIRST = 0x1000;
+    private const int LVM_GETITEMSPACING = LVM_FIRST + 51;
+    private const uint LVM_ARRANGE = LVM_FIRST + 22;
+    private const uint LVM_GETITEMCOUNT = LVM_FIRST + 4;
+    private const uint LVA_ALIGNLEFT = 0x0001; // left alignment
+
     [Guid("1af3a467-213b-42c5-83e0-47844020a173"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     interface IFolderView
     {
-        [PreserveSig] int GetSpacing(ref POINT pPt); // 获取图标间距（含图标本身）
+        [PreserveSig] int GetSpacing(ref POINT pPt); 
         [PreserveSig] int GetViewMode(out uint puViewMode);
     }
     [StructLayout(LayoutKind.Sequential)]
@@ -28,16 +39,32 @@ public static class DesktopIconManager
     public static System.Drawing.Size GetDesktopIconSize()
     {
         IntPtr shellView = GetDesktopListViewHandle();
-        int width = GetSystemMetrics(11);  // SM_CXICON
-        int height = GetSystemMetrics(12); // SM_CYICON
+        int width = GetSystemMetrics(SM_CXICON);  // SM_CXICON
+        int height = GetSystemMetrics(SM_CYICON); // SM_CYICON
         return new System.Drawing.Size(width, height);
     }
+    public static Size GetDesktopIconSpacing()
+    {
+        IntPtr desktopWindow = GetDesktopWindow();
+        IntPtr listViewHandle = FindWindowEx(desktopWindow, IntPtr.Zero, "SysListView32", null);
 
-   
-    private const uint LVM_FIRST = 0x1000;
-    private const uint LVM_ARRANGE = LVM_FIRST + 22;
-    private const uint LVM_GETITEMCOUNT = LVM_FIRST + 4;
-    private const uint LVA_ALIGNLEFT = 0x0001; // left alignment
+        if (listViewHandle != IntPtr.Zero)
+        {
+            IntPtr result = SendMessage(listViewHandle, LVM_GETITEMSPACING, new IntPtr(1), IntPtr.Zero);
+            int spacing = result.ToInt32();
+            int width = spacing & 0xFFFF;       
+            int height = (spacing >> 16) & 0xFFFF; 
+
+            return new Size(width, height);
+        }
+        else
+        {
+            //  if retrieval fails, return a reasonable default value (e.g., 96x68)
+            return new Size(96, 68);
+        }
+    }
+
+    
 
     public static void ArrangeIconsToLeft()
     {
@@ -63,17 +90,14 @@ public static class DesktopIconManager
 
         Rectangle screenArea = Screen.PrimaryScreen.WorkingArea;
 
-        int singleIconWidth = 80;   
-        int singleIconHeight = 90;  
-        int iconsPerColumn = iconCount; 
+        Size iconSize = GetDesktopIconSize();
+        Size iconSpaceSize = GetDesktopIconSpacing();
+        int iconsPerColumn = screenArea.Height/ (iconSize.Height + iconSpaceSize.Height);
 
-        int areaWidth = singleIconWidth + 20; 
+        int needCol = (iconCount + iconsPerColumn - 1) / iconsPerColumn;
+        int areaWidth = (iconSize.Width + iconSpaceSize.Width) * needCol; 
 
-        int areaHeight = iconsPerColumn * singleIconHeight;
-
-        areaHeight = Math.Min(areaHeight, screenArea.Height);
-
-        return new Rectangle(screenArea.Left, screenArea.Top, areaWidth, areaHeight);
+        return new Rectangle(screenArea.Left, screenArea.Top, areaWidth, screenArea.Height);
     }
 
     public static Rectangle GetUsableScreenArea()

@@ -1,3 +1,4 @@
+using Fenceless.Properties;
 using Fenceless.UI;
 using Fenceless.Util;
 using System;
@@ -79,9 +80,9 @@ namespace Fenceless.Model
         }
         public void SizeAllFence()
         {
-            // make sure desktop icons are arranged to left win10/11  not doing it properly
+            // try move desktop icons arranged to left, but win10/11  not doing it properly
             DesktopIconManager.ArrangeIconsToLeft();
-            // get usable screen area
+            // get usable screen area, 
             Rectangle usableArea = DesktopIconManager.GetUsableScreenArea();
             // calculate new layout by number of open forms
             int myFormCount = Application.OpenForms.Count;
@@ -173,15 +174,21 @@ namespace Fenceless.Model
 
         public void CreateFence(string name)
         {
+            
             try
             {
                 logger.Info($"Creating new fence: '{name}'", "FenceManager");
                 var settings = AppSettings.Instance;
+                settings.DefaultFenceWidth = Screen.PrimaryScreen.WorkingArea.Width / 4;
+                settings.DefaultFenceHeight = Screen.PrimaryScreen.WorkingArea.Height / 3;
+                settings.DefaultFencePosX = (Screen.PrimaryScreen.WorkingArea.Width - settings.DefaultFenceWidth) / 2;
+                settings.DefaultFencePosY = (Screen.PrimaryScreen.WorkingArea.Height - settings.DefaultFenceHeight) / 2;
+
                 var fenceInfo = new FenceInfo(Guid.NewGuid())
                 {
                     Name = name,
-                    PosX = 100,
-                    PosY = 250,
+                    PosX = settings.DefaultFencePosX,
+                    PosY = settings.DefaultFencePosY,
                     Height = settings.DefaultFenceHeight,
                     Width = settings.DefaultFenceWidth,
                     TitleHeight = settings.DefaultTitleHeight,
@@ -413,6 +420,7 @@ namespace Fenceless.Model
             {
                 logger.Debug("Opening global settings dialog", "FenceManager");
                 var settingsForm = new SettingsForm();
+                settingsForm.Owner = Application.OpenForms[0];
                 if (settingsForm.ShowDialog() == DialogResult.OK)
                 {
                     // Refresh global hotkeys if they changed
@@ -423,26 +431,6 @@ namespace Fenceless.Model
             catch (Exception ex)
             {
                 logger.Error("Failed to show global settings", "FenceManager", ex);
-            }
-        }
-
-        public void ShowFenceSettings(FenceInfo fenceInfo)
-        {
-            try
-            {
-                logger.Debug($"Opening settings for fence '{fenceInfo.Name}'", "FenceManager");
-                var settingsForm = new SettingsForm();
-                if (settingsForm.ShowDialog() == DialogResult.OK)
-                {
-                    // Find the fence window and refresh its settings
-                    var fenceWindow = activeFences.FirstOrDefault(f => f.GetFenceInfo().Id == fenceInfo.Id);
-                    fenceWindow?.ApplySettings();
-                    logger.Info($"Settings updated for fence '{fenceInfo.Name}'", "FenceManager");
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.Error($"Failed to show fence settings for '{fenceInfo.Name}'", "FenceManager", ex);
             }
         }
 
