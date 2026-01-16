@@ -623,23 +623,18 @@ namespace Fenceless
 
         protected override void WndProc(ref Message m)
         {
-            const uint HideWindowFlag = 0x0080;
-            const int WM_DISPLAYCHANGE = 0x007E;
 
-            switch (m.Msg)
+            // new screen resolution
+            if (m.Msg == WM_DISPLAYCHANGE)
             {
-                case WM_DISPLAYCHANGE:
-                    // new screan resolution
-                    int newWidth = (int)m.LParam & 0xFFFF;  // lParam low 16 bits is width
-                    int newHeight = (int)m.LParam >> 16;    // lParam high 16 bits is height
-                    int colorDepth = (int)m.WParam;         // wParam means color depth
+                int newWidth = (int)m.LParam & 0xFFFF;  // lParam low 16 bits is width
+                int newHeight = (int)m.LParam >> 16;    // lParam high 16 bits is height
+                int colorDepth = (int)m.WParam;         // wParam means color depth
 
-                    // handle display change
-                    HandleDisplayChangeGrid(newWidth, newHeight);
-                    _fenceInfo.ScreenX = newWidth;
-                    _fenceInfo.ScreenY = newHeight;
-                    break;
-                   
+                // handle screen resolution change
+                HandleDisplayChangeGrid(newWidth, newHeight);
+                _fenceInfo.ScreenX = newWidth;
+                _fenceInfo.ScreenY = newHeight;
             }
 
             // Remove border

@@ -6,37 +6,43 @@ namespace Fenceless.Win32
 {
     public class WindowUtil
     {
-        public const int WM_NCHITTEST = 0x84;          // variables for dragging the form
-        public const int HTCLIENT = 0x1;
-        public const int HTCAPTION = 0x2;
-        public const int HTLEFT = 10;
-        public const int HTRIGHT = 11;
-        public const int HTTOP = 12;
-        public const int HTTOPLEFT = 13;
-        public const int HTTOPRIGHT = 14;
-        public const int HTBOTTOM = 15;
-        public const int HTBOTTOMLEFT = 16;
-        public const int HTBOTTOMRIGHT = 17;
+        public const uint WM_NCHITTEST = 0x84;          // variables for dragging the form
+        public const uint HTCLIENT = 0x1;
+        public const uint HTCAPTION = 0x2;
+        public const uint HTLEFT = 10;
+        public const uint HTRIGHT = 11;
+        public const uint HTTOP = 12;
+        public const uint HTTOPLEFT = 13;
+        public const uint HTTOPRIGHT = 14;
+        public const uint HTBOTTOM = 15;
+        public const uint HTBOTTOMLEFT = 16;
+        public const uint HTBOTTOMRIGHT = 17;
 
-        public const int WM_SYSCOMMAND = 274;
-        public const int SC_MAXIMIZE = 0xF030;
-        public const int SC_MINIMIZE = 0xF020;
-
+        public const uint WM_SYSCOMMAND = 274;
+        public const uint SC_MAXIMIZE = 0xF030;
+        public const uint SC_MINIMIZE = 0xF020;
+                     
         public const UInt32 SWP_NOSIZE = 0x0001;
         public const UInt32 SWP_NOMOVE = 0x0002;
         public const UInt32 SWP_NOACTIVATE = 0x0010;
         public const UInt32 SWP_NOZORDER = 0x0004;
-        public const int WM_ACTIVATEAPP = 0x001C;
-        public const int WM_ACTIVATE = 0x0006;
-        public const int WM_SETFOCUS = 0x0007;
-        public const int WM_SHOWWINDOW = 0x0018;
-        public const int WM_SIZE = 0x0005;
-    public const int WM_COMMAND = 0x0111;
-    public const int WM_WINDOWPOSCHANGING = 0x0046;
-    public const int WM_WINDOWPOSCHANGED = 0x0047;
-    // Shell taskbar commands triggered by Show Desktop
-    public const int MIN_ALL = 0x01A3;
-    public const int MIN_ALL_UNDO = 0x01A0;
+        public const uint HideWindowFlag = 0x0080;
+
+        public const uint WM_ACTIVATEAPP = 0x001C;
+        public const uint WM_ACTIVATE = 0x0006;
+        public const uint WM_SETFOCUS = 0x0007;
+        public const uint WM_SHOWWINDOW = 0x0018;
+        public const uint WM_SIZE = 0x0005;
+        public const uint WM_COMMAND = 0x0111;
+        public const uint WM_WINDOWPOSCHANGING = 0x0046;
+        public const uint WM_WINDOWPOSCHANGED = 0x0047;
+
+        // Shell taskbar commands triggered by Show Desktop
+        public const uint MIN_ALL = 0x01A3;
+        public const uint MIN_ALL_UNDO = 0x01A0;
+
+        public const uint WM_DISPLAYCHANGE = 0x007E;
+
         public static readonly IntPtr HWND_BOTTOM = new IntPtr(1);
 
         [StructLayout(LayoutKind.Sequential)]
@@ -175,12 +181,12 @@ namespace Fenceless.Win32
                 exStyle = new IntPtr(exStyle.ToInt64() | (int)ExtendedWindowStyles.WS_EX_TOOLWINDOW);
                 exStyle = new IntPtr(exStyle.ToInt64() | (int)ExtendedWindowStyles.WS_EX_NOACTIVATE);
                 exStyle = new IntPtr(exStyle.ToInt64() & ~0x00040000); // Remove WS_EX_APPWINDOW
-                
+
                 SetWindowLong(Handle, (int)GetWindowLongFields.GWL_EXSTYLE, exStyle);
 
                 // Move window to bottom to ensure it doesn't appear in Alt+Tab
                 SetWindowPos(Handle, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
-                
+
                 Logger.Instance?.Debug("Successfully hidden window from Alt+Tab and prevented Show Desktop minimize", "WindowUtil");
             }
             catch (Exception ex)
