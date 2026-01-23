@@ -5,6 +5,7 @@ using Fenceless.Win32;
 using Peter;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -137,6 +138,7 @@ namespace Fenceless
             Minify();
 
             logger.Info($"Fence window '{fenceInfo.Name}' created successfully at ({fenceInfo.PosX}, {fenceInfo.PosY})", "FenceWindow");
+           
         }
 
         private void SetupEventHandlers()
@@ -1000,6 +1002,21 @@ namespace Fenceless
 
         private void FenceWindow_MouseMove(object sender, MouseEventArgs e)
         {
+            // first handle form dragging
+            if (_isFormDrag && e.Button == MouseButtons.Left && !_isDraggingForm)
+            {
+                // calculate movement distance
+                int moveX = Math.Abs(e.X - _formDragStartPoint.X);
+                int moveY = Math.Abs(e.Y - _formDragStartPoint.Y);
+
+                // if movement exceeds threshold, start form drag
+                if (moveX > SystemInformation.DragSize.Width / 2 ||
+                    moveY > SystemInformation.DragSize.Height / 2)
+                {
+                    StartFormDrag();
+                    return; 
+                }
+            }
             // Handle internal item dragging
             if (isDraggingItem && !lockedToolStripMenuItem.Checked)
             {
@@ -1061,6 +1078,19 @@ namespace Fenceless
                 Refresh();
             }
         }
+        private bool _isFormDrag = false;
+        private Point _formDragStartPoint = Point.Empty;
+        private bool _isDraggingForm = false;
+
+        [DllImport("user32.dll")]
+        public static extern bool ReleaseCapture();
+
+        [DllImport("user32.dll")]
+        public static extern int SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
+
+        public const int WM_NCLBUTTONDOWN = 0xA1;
+        public const int HT_CAPTION = 0x2;
+
 
         private void FenceWindow_MouseDown(object sender, MouseEventArgs e)
         {
@@ -1073,6 +1103,7 @@ namespace Fenceless
                 if (itemPath != null && ItemExists(itemPath))
                 {
                     selectedItem = itemPath;
+                    _isFormDrag = false;
                     Refresh();
                 }
                 else if (itemPath != null)
@@ -1083,6 +1114,23 @@ namespace Fenceless
                     selectedItem = null;
                     Save();
                     Refresh();
+                    _isFormDrag = false;
+                }
+                else
+                {
+                    _isFormDrag = true;
+                    _formDragStartPoint = e.Location;
+                    selectedItem = null;
+                }
+            }
+            else if (e.Button == MouseButtons.Left && lockedToolStripMenuItem.Checked)
+            {
+                //if locked, allow form dragging only
+                var itemPath = GetItemAtPosition(e.Location);
+                if (itemPath == null)
+                {
+                    _isFormDrag = true;
+                    _formDragStartPoint = e.Location;
                 }
             }
         }
@@ -1093,8 +1141,33 @@ namespace Fenceless
             {
                 CompleteDrag(e.Location);
             }
-        }
+            // end form dragging
+            if (_isDraggingForm)
+            {
+                _isDraggingForm = false;
+                SaveFormPosition();
+            }
 
+            _isFormDrag = false;
+        }
+        private void SaveFormPosition()
+        {
+            try
+            {
+                if (this.Location.X < 0) this.Location = new Point(0, this.Location.Y);
+                if (this.Location.Y < 0) this.Location = new Point(this.Location.X, 0);
+
+                Screen screen = Screen.FromControl(this);
+                if (this.Right > screen.WorkingArea.Right)
+                    this.Location = new Point(screen.WorkingArea.Right - this.Width, this.Location.Y);
+                if (this.Bottom > screen.WorkingArea.Bottom)
+                    this.Location = new Point(this.Location.X, screen.WorkingArea.Bottom - this.Height);
+            }
+            catch (Exception ex)
+            {
+                logger.Error($"Failed to save form position: {ex.Message}", "FenceWindow");
+            }
+        }
         private void FenceWindow_MouseEnter(object sender, EventArgs e)
         {
             isMouseInside = true;
@@ -1124,6 +1197,21 @@ namespace Fenceless
             Refresh();
         }
 
+        private void StartFormDrag()
+        {
+            if (!_isDraggingForm)
+            {
+                _isDraggingForm = true;
+
+                ReleaseCapture();
+                SendMessage(this.Handle, WM_NCLBUTTONDOWN, HT_CAPTION, 0);
+
+                // 记录拖动开始的位置
+                _formDragStartPoint = this.Location;
+
+                logger.Debug("Started form drag", "FenceWindow");
+            }
+        }
         private void CompleteDrag(Point dropLocation)
         {
             if (!isDraggingItem || draggingItem == null) return;
