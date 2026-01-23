@@ -83,7 +83,7 @@ namespace Fenceless.Model
             // try move desktop icons arranged to left, but win10/11  not doing it properly
             DesktopIconManager.ArrangeIconsToLeft();
             // get usable screen area, 
-            Rectangle usableArea = DesktopIconManager.GetUsableScreenArea();
+            Rectangle usableArea = new DesktopIconManager().GetUsableScreenArea();
             // calculate new layout by number of open forms
             int myFormCount = Application.OpenForms.Count;
             List<Rectangle> layoutResult = FormLayoutCalculator.CalculateLayoutOnPrimaryScreen(myFormCount, usableArea, preferMoreRows: false);

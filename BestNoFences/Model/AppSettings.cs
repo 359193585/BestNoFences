@@ -224,16 +224,20 @@ namespace Fenceless.Model
             {
                 // Write to temporary file
                 File.WriteAllText(tempPath, content);
-                
+
                 // Create backup of existing file if it exists
                 if (File.Exists(path))
                 {
                     File.Copy(path, backupPath, true);
+
+                    // Replace original with temporary file
+                    File.Replace(tempPath,path, backupPath);
                 }
-                
-                // Replace original with temporary file
-                File.Replace(tempPath, path, backupPath);
-                
+                else
+                {
+                    File.Copy(tempPath, path, true);
+                }
+
                 // Clean up backup file
                 if (File.Exists(backupPath))
                 {

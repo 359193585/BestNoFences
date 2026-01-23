@@ -1,9 +1,10 @@
-﻿using System;
+﻿using Fenceless.Util;
+using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
-public static class DesktopIconManager
+public class DesktopIconManager
 {
     [DllImport("user32.dll", SetLastError = true)]
     private static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
@@ -28,6 +29,8 @@ public static class DesktopIconManager
     private const uint LVM_GETITEMCOUNT = LVM_FIRST + 4;
     private const uint LVA_ALIGNLEFT = 0x0001; // left alignment
 
+    private readonly Logger logger;
+
     [Guid("1af3a467-213b-42c5-83e0-47844020a173"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     interface IFolderView
     {
@@ -35,7 +38,13 @@ public static class DesktopIconManager
         [PreserveSig] int GetViewMode(out uint puViewMode);
     }
     [StructLayout(LayoutKind.Sequential)]
+  
     public struct POINT { public int x; public int y; }
+    public DesktopIconManager()
+    {
+        logger = Logger.Instance;
+
+    }
     public static System.Drawing.Size GetDesktopIconSize()
     {
         IntPtr shellView = GetDesktopListViewHandle();
@@ -76,9 +85,11 @@ public static class DesktopIconManager
         }
     }
 
-    public static Rectangle EstimateIconsArea()
+    public  Rectangle EstimateIconsArea(out Size iconSize, out Size iconSpaceSize)
     {
-        ArrangeIconsToLeft(); 
+        ArrangeIconsToLeft();
+        iconSize = GetDesktopIconSize();
+        iconSpaceSize = GetDesktopIconSpacing();
 
         IntPtr hDesktopListView = GetDesktopListViewHandle();
         if (hDesktopListView == IntPtr.Zero)
@@ -89,29 +100,31 @@ public static class DesktopIconManager
             return Rectangle.Empty;
 
         Rectangle screenArea = Screen.PrimaryScreen.WorkingArea;
-
-        Size iconSize = GetDesktopIconSize();
-        Size iconSpaceSize = GetDesktopIconSpacing();
-        int iconsPerColumn = screenArea.Height/ (iconSpaceSize.Height);
+        int iconsPerColumn = screenArea.Height / (iconSpaceSize.Height);
+        //logger.Info($"get iconSize:{iconSize.Width},{iconSize.Height}  ", "DesktopIconManager");
+        //logger.Info($"get iconSpaceSize: {iconSpaceSize.Width},{iconSpaceSize.Height}  ", "DesktopIconManager");
 
         int needCol = (iconCount + iconsPerColumn - 1) / iconsPerColumn;
+        needCol += 1;
         int areaWidth = (iconSpaceSize.Width) * needCol; 
 
         return new Rectangle(screenArea.Left, screenArea.Top, areaWidth, screenArea.Height);
     }
 
-    public static Rectangle GetUsableScreenArea()
+    public  Rectangle GetUsableScreenArea()
     {
         Rectangle screenArea = Screen.PrimaryScreen.WorkingArea;
-        Rectangle iconsArea = EstimateIconsArea();
-
+        Size iconSize;
+        Size iconSpaceSize;
+        Rectangle iconsArea = EstimateIconsArea(out  iconSize, out iconSpaceSize);
+        //logger.Info($"get icons area in desktop {iconsArea.X},{iconsArea.Y},{iconsArea.Width},{iconsArea.Height}  ", "DesktopIconManager");
         if (iconsArea.IsEmpty)
             return screenArea;
 
         return new Rectangle(
             x: iconsArea.Right,
             y: screenArea.Top,
-            width: screenArea.Width - iconsArea.Width,
+            width: screenArea.Width - iconsArea.Width - iconSpaceSize.Width,
             height: screenArea.Height
         );
     }
