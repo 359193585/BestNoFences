@@ -1,17 +1,13 @@
 using Fenceless.Model;
-using Fenceless.Win32;
 using Fenceless.Util;
-using Fenceless.UI;
+using Fenceless.Win32;
 using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
-using System.Net.Http;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Newtonsoft.Json.Linq;
 
 namespace Fenceless
 {

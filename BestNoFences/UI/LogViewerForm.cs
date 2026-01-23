@@ -38,8 +38,23 @@ namespace Fenceless.UI
             LoadLogContent();
             SetupRefreshTimer();
         }
-
         private void InitializeComponent()
+        {
+            this.SuspendLayout();
+
+            // Form setup
+            this.Name = "LogViewerForm";
+            this.Text = "Log Viewer";
+            this.MaximizeBox = true;
+            this.MinimizeBox = true;
+            this.StartPosition = FormStartPosition.CenterScreen;
+            this.ShowInTaskbar = true;
+            ClientSize = new Size(500, 250);
+            Name = "LogViewerForm";
+            CreateControls();
+            this.ResumeLayout(false);
+        }
+        private void CreateControls()
         {
             toolbarPanel = new Panel();
             logLevelLabel = new DarkUI.Controls.DarkLabel();
@@ -174,6 +189,7 @@ namespace Fenceless.UI
             ResumeLayout(false);
             PerformLayout();
         }
+      
 
         private void SetupRefreshTimer()
         {
