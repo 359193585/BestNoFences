@@ -30,23 +30,26 @@ namespace Fenceless
             {
                 // Initialize logging first
                 logger = Logger.Instance;
-                
+
                 // Load settings to configure logging properly
                 var settings = AppSettings.Instance;
-                
+
                 logger.Info("####    Fenceless application starting...", "Main");
+
 
 
                 //allows the context menu to be in dark mode
                 //inherits from the system settings
                 WindowUtil.SetPreferredAppMode(1);
 
+                // Check  if a new release is available 
+                _ = Task.Run(UpdateNotication.CheckForUpdatesAsync);
                 using (var mutex = new Mutex(true, "BettetNoFences", out var createdNew))
                 {
                     if (createdNew)
                     {
                         logger.Info("Application mutex acquired, starting main application", "Main");
-                        
+
                         Application.EnableVisualStyles();
                         Application.SetCompatibleTextRenderingDefault(false);
 
@@ -69,7 +72,7 @@ namespace Fenceless
                             trayIcon.Text = "Fenceless - Desktop organization tool";
 
                             var contextMenu = new ContextMenuStrip();
-# region Init right-click pop-up menus for taskbar icon
+                            #region Init right-click pop-up menus for taskbar icon
 
                             // Add Fence menu item with sub menu for fence type
                             var addFenceMenuItem = new ToolStripMenuItem("Add Fence");
@@ -89,12 +92,12 @@ namespace Fenceless
                             var logViewerMenuItem = new ToolStripMenuItem("View Logs");
                             logViewerMenuItem.Click += (s, e) => ShowLogViewer();
                             contextMenu.Items.Add(logViewerMenuItem);
-                            
+
                             // Add Settings menu item
                             var settingsMenuItem = new ToolStripMenuItem("Settings");
                             settingsMenuItem.Click += (s, e) => FenceManager.Instance.ShowGlobalSettings();
                             contextMenu.Items.Add(settingsMenuItem);
-                            
+
                             contextMenu.Items.Add(new ToolStripSeparator()); // -----------------
 
                             // Add auto size ment item
@@ -107,7 +110,7 @@ namespace Fenceless
                             // Add Start with Windows checkbox
                             var startWithWindowsMenuItem = new ToolStripMenuItem("Start with Windows");
                             startWithWindowsMenuItem.CheckOnClick = true;
-                            
+
                             // Sync the setting with actual registry state at startup
                             bool actualStartupState = Util.StartupManager.IsStartupEnabled();
                             var appSettings = AppSettings.Instance;
@@ -129,7 +132,7 @@ namespace Fenceless
                                     if (!Util.StartupManager.EnableStartup())
                                     {
                                         logger.Error("Failed to enable startup", "Main");
-                                        MessageBox.Show("Failed to enable startup with Windows. Please check the logs for details.", 
+                                        MessageBox.Show("Failed to enable startup with Windows. Please check the logs for details.",
                                             "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                                         startWithWindowsMenuItem.Checked = false;
                                         appSettings.StartWithWindows = false;
@@ -144,7 +147,7 @@ namespace Fenceless
                                     if (!Util.StartupManager.DisableStartup())
                                     {
                                         logger.Error("Failed to disable startup", "Main");
-                                        MessageBox.Show("Failed to disable startup with Windows. Please check the logs for details.", 
+                                        MessageBox.Show("Failed to disable startup with Windows. Please check the logs for details.",
                                             "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                                         startWithWindowsMenuItem.Checked = true;
                                         appSettings.StartWithWindows = true;
@@ -158,10 +161,10 @@ namespace Fenceless
                                 appSettings.SaveSettings();
                             };
                             contextMenu.Items.Add(startWithWindowsMenuItem);
-                            
+
 
                             contextMenu.Items.Add(new ToolStripSeparator());
-                            
+
                             var exitMenuItem = new ToolStripMenuItem("Exit");
                             exitMenuItem.Click += (s, e) =>
                             {
@@ -189,7 +192,7 @@ namespace Fenceless
                                     logger.Info("No existing fences found, creating first fence", "Main");
                                     FenceManager.Instance.CreateFence("First fence");
                                 }
-                                
+
                                 logger.Info("Fenceless initialized successfully", "Main");
                                 Application.Run();
                             }
@@ -212,8 +215,6 @@ namespace Fenceless
                     }
                 }
 
-                // Check  if a new release is available 
-                _ = Task.Run(UpdateNotication.CheckForUpdatesAsync);
             }
             catch (Exception ex)
             {
@@ -221,8 +222,8 @@ namespace Fenceless
                     logger.Critical("Critical error in main application", "Main", ex);
                 else
                     Debug.WriteLine($"Critical error: {ex}");
-                
-                MessageBox.Show($"Critical application error: {ex.Message}\n\nPlease check the log files for more details.", "Critical Error", 
+
+                MessageBox.Show($"Critical application error: {ex.Message}\n\nPlease check the log files for more details.", "Critical Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }

@@ -43,6 +43,10 @@ namespace Fenceless.Win32
 
         public const uint WM_DISPLAYCHANGE = 0x007E;
 
+
+        public const uint SHCNE_ASSOCCHANGED = 0x08000000;
+        public const uint SHCNF_FLUSH = 0x1000;
+
         public static readonly IntPtr HWND_BOTTOM = new IntPtr(1);
 
         [StructLayout(LayoutKind.Sequential)]
@@ -89,6 +93,9 @@ namespace Fenceless.Win32
         public static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
         [DllImport("user32.dll", SetLastError = true)]
         public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+
+        [DllImport("shell32.dll")]
+        public static extern void SHChangeNotify(uint wEventId,uint uFlags,IntPtr dwItem1,IntPtr dwItem2);
 
         #region Window styles
         [Flags]

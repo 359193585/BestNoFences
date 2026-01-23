@@ -21,8 +21,8 @@ public class FormLayoutCalculator
         int cols, rows;
         CalculateOptimalGrid(formCount, screenWorkingArea.Width, screenWorkingArea.Height, preferMoreRows, out cols, out rows);
 
-        int cellWidth = (screenWorkingArea.Width-screenWorkingArea.X) / cols;
-        int cellHeight = (screenWorkingArea.Height-screenWorkingArea.Y) / rows;
+        int cellWidth = screenWorkingArea.Width / cols;
+        int cellHeight = screenWorkingArea.Height / rows;
 
         int totalWidthLoss = screenWorkingArea.Width - (cellWidth * cols);
         int totalHeightLoss = screenWorkingArea.Height - (cellHeight * rows);
@@ -88,8 +88,9 @@ public class FormLayoutCalculator
 
     public static List<Rectangle> CalculateLayoutOnPrimaryScreen(int formCount, Rectangle usableArea, bool preferMoreRows = false)
     {
-        Rectangle screenWorkingArea = usableArea;// Screen.PrimaryScreen.WorkingArea;
-        screenWorkingArea.Width = screenWorkingArea.Width - DesktopIconManager.GetDesktopIconSize().Width;
-        return CalculateLayout(formCount, screenWorkingArea, preferMoreRows);
+        return CalculateLayout(formCount, usableArea, preferMoreRows);
+        //Rectangle screenWorkingArea = usableArea;// Screen.PrimaryScreen.WorkingArea;
+        //screenWorkingArea.Width = screenWorkingArea.Width - DesktopIconManager.GetDesktopIconSize().Width;
+        //return CalculateLayout(formCount, screenWorkingArea, preferMoreRows);
     }
 }

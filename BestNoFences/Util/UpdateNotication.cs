@@ -13,6 +13,7 @@ namespace Fenceless.Util
         private static Logger logger;
         internal static async Task CheckForUpdatesAsync()
         {
+            logger = Logger.Instance;
             try
             {
                 if (logger == null)
