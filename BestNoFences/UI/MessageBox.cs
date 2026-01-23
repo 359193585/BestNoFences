@@ -1,15 +1,10 @@
-﻿using System;
+﻿using DarkUI.Controls;
+using DarkUI.Forms;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using DarkUI;
-using DarkUI.Controls;
-using DarkUI.Data.Enums;
-using DarkUI.Forms;
-using Fenceless.Win32;
 
 namespace Fenceless.UI
 {
