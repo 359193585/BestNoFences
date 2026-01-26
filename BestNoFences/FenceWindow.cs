@@ -1,4 +1,5 @@
 ﻿using Fenceless.Model;
+using Fenceless.Properties;
 using Fenceless.UI;
 using Fenceless.Util;
 using Fenceless.Win32;
@@ -963,10 +964,41 @@ namespace Fenceless
                         addedFiles++;
                         logger.Debug($"Added file to fence: {file}", "FenceWindow");
 
-                        bool enableDeleteOldLink = false;
-                        if (enableDeleteOldLink)
+                        if (AppSettings.Instance.isDeleteSourceLinkFile == -1) //init value ,ask user
                         {
-                          // DeleteShortcutFile(file);
+                            DialogResult dialogResult = CustomMessageBox.Show(
+                                "Do you want keep source link?",
+                                "Fenceless | Message",
+                                MessageBoxButtons.YesNo,
+                                MessageBoxIcon.Question);
+                            if (dialogResult == DialogResult.Yes)
+                            {
+                                AppSettings.Instance.isDeleteSourceLinkFile = 0;
+                            }
+                            else if (dialogResult == DialogResult.No)
+                            {
+                                AppSettings.Instance.isDeleteSourceLinkFile = 1;
+                            }
+                        }
+                        if (AppSettings.Instance.isAskDeleteSourceLinkFile) {
+                            DialogResult dialogResult2 = CustomMessageBox.Show(
+                                "Do you want to keep operating like this in the future? (The settings will not be saved persistently and you will be asked again after the program restarts.)",
+                                "Fenceless | Message",
+                                MessageBoxButtons.YesNo,
+                                MessageBoxIcon.Question);
+                            if (dialogResult2 == DialogResult.Yes)
+                            {
+                                AppSettings.Instance.isAskDeleteSourceLinkFile = false;
+                            }
+                        }
+                        
+
+                        if (AppSettings.Instance.isDeleteSourceLinkFile == 1)
+                        {
+                            // DeleteShortcutFile(file);
+                            logger.Debug($"Deleted source link file for: {file}", "FenceWindow");
+
+
                         }
                     }
                     else

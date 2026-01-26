@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace Fenceless.UI
@@ -31,20 +32,23 @@ namespace Fenceless.UI
 
         private void InitializeComponent()
         {
-            this.SuspendLayout();
-
-            // Form properties
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.FormBorderStyle = FormBorderStyle.None;
-            this.ClientSize = new Size(400, 200);
-            this.ShowInTaskbar = false;
-            this.TopMost = true;
-            this.Font = new Font("Segoe UI", 9F);
-            this.Padding = new Padding(1);
-            this.BackColor = Color.FromArgb(45, 45, 48);
-            this.MinimumSize = new Size(300, 150);
-            this.MaximizeBox = false;
-            this.MinimizeBox = false;
+            SuspendLayout();
+            // 
+            // CustomMessageBox
+            // 
+            BackColor = Color.FromArgb(45, 45, 48);
+            ClientSize = new Size(400, 200);
+            Font = new Font("Segoe UI", 9F);
+            FormBorderStyle = FormBorderStyle.None;
+            MaximizeBox = false;
+            MinimizeBox = false;
+            MinimumSize = new Size(300, 150);
+            Name = "CustomMessageBox";
+            Padding = new Padding(1);
+            ShowInTaskbar = false;
+            StartPosition = FormStartPosition.CenterScreen;
+            TopMost = true;
+            ResumeLayout(false);
         }
 
         private void SetupForm(string title)
@@ -108,7 +112,9 @@ namespace Fenceless.UI
             {
                 Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(60, 63, 65),
-                Padding = new Padding(20)
+                Padding = new Padding(20),
+                BorderStyle = BorderStyle.FixedSingle,
+                
             };
 
             // Create message label
@@ -119,25 +125,7 @@ namespace Fenceless.UI
                 Font = new Font("Segoe UI", 9F),
                 AutoSize = false,
                 Dock = DockStyle.Fill,
-                TextAlign = ContentAlignment.MiddleLeft
-            };
-
-            // Handle text wrapping
-            messageLabel.Paint += (s, e) =>
-            {
-                var label = s as DarkLabel;
-                if (label != null)
-                {
-                    var rect = new Rectangle(0, 0, label.Width, label.Height);
-                    var format = new StringFormat
-                    {
-                        Alignment = StringAlignment.Near,
-                        LineAlignment = StringAlignment.Center,
-                        FormatFlags = StringFormatFlags.LineLimit
-                    };
-
-                    e.Graphics.DrawString(label.Text, label.Font, new SolidBrush(label.ForeColor), rect, format);
-                }
+                TextAlign = ContentAlignment.MiddleLeft,
             };
 
             contentPanel.Controls.Add(messageLabel);
@@ -311,4 +299,5 @@ namespace Fenceless.UI
             }
         }
     }
+   
 }

@@ -138,9 +138,7 @@ namespace Fenceless.Model
         }
         public void SizeAllFenceRight()
         {
-            // try move desktop icons arranged to left, but win10/11  not doing it properly
-            DesktopIconManager.ArrangeIconsToLeft();
-            // half screen area minus desktop icons area
+            // half screen area 
             Rectangle usableArea = new Rectangle(
                 x: Screen.PrimaryScreen.WorkingArea.Width / 2,
                 y: 0,

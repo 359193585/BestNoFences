@@ -1,10 +1,10 @@
+using Fenceless.Util;
 using Newtonsoft.Json;
 using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
-using Fenceless.Util;
 
 namespace Fenceless.Model
 {
@@ -19,7 +19,7 @@ namespace Fenceless.Model
         public bool EnableAnimations { get; set; } = true;
         public int DefaultFencePosX { get; set; } = 100;
         public int DefaultFencePosY { get; set; } = 250;
-        
+
         public int DefaultFenceWidth { get; set; } = 524;
         public int DefaultFenceHeight { get; set; } = 517;
 
@@ -49,7 +49,7 @@ namespace Fenceless.Model
         // Logging settings
         public string LogLevel { get; set; } = "Info";
         public bool EnableFileLogging { get; set; } = true;
-        
+
         // Startup settings
         public bool StartWithWindows { get; set; } = false;
 
@@ -65,13 +65,15 @@ namespace Fenceless.Model
 
         [JsonIgnore]
         private readonly string settingsPath;
-        
+
         [JsonIgnore]
         private readonly Logger logger;
-        
+
         [JsonIgnore]
         private static readonly ReaderWriterLockSlim _settingsLock = new ReaderWriterLockSlim();
-        
+
+        public int isDeleteSourceLinkFile { get; set; } = -1;  // FFNESI: delete source .lnk file when drag icon in fence,not saved in settings.json, only in memory during runtime,0=do not delete, 1=delete,-1=unset ask user
+        public bool isAskDeleteSourceLinkFile { get; set; } = true; // FFNESI: ask user whether to delete source .lnk file when drag icon in fence, not saved in settings.json, only in memory during runtime, init value is true
         private AppSettings()
         {
             // Initialize logger first, but handle case where it might not be available yet
@@ -84,22 +86,22 @@ namespace Fenceless.Model
                 // Logger might not be initialized yet during startup
                 logger = null;
             }
-            
+
             var appDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Fenceless");
             settingsPath = Path.Combine(appDataPath, "settings.json");
             LoadSettings();
-            
+
             // Apply logging settings after loading
             ApplyLoggingSettings();
         }
-        
+
         public void LoadSettings()
         {
             _settingsLock.EnterWriteLock();
             try
             {
                 logger?.Debug($"Loading settings from: {settingsPath}", "AppSettings");
-                
+
                 if (File.Exists(settingsPath))
                 {
                     var json = File.ReadAllText(settingsPath);
@@ -142,7 +144,7 @@ namespace Fenceless.Model
                         MinimizeAllFencesShortcut = ValidateShortcut(tempSettings.MinimizeAllFencesShortcut) ?? "Ctrl+Alt+M";
                         RefreshFencesShortcut = ValidateShortcut(tempSettings.RefreshFencesShortcut) ?? "F5";
                         StartWithWindows = tempSettings.StartWithWindows;
-                        
+
                         logger?.Info("Application settings loaded successfully", "AppSettings");
                     }
                 }
@@ -160,20 +162,20 @@ namespace Fenceless.Model
                 _settingsLock.ExitWriteLock();
             }
         }
-        
+
         public void SaveSettings()
         {
             _settingsLock.EnterReadLock();
             try
             {
                 logger?.Debug($"Saving settings to: {settingsPath}", "AppSettings");
-                
+
                 var json = JsonConvert.SerializeObject(this, Formatting.Indented);
                 AtomicFileWrite(settingsPath, json);
-                
+
                 // Apply logging settings after saving
                 ApplyLoggingSettings();
-                
+
                 logger?.Info("Application settings saved successfully", "AppSettings");
             }
             catch (Exception ex)
@@ -185,7 +187,7 @@ namespace Fenceless.Model
                 _settingsLock.ExitReadLock();
             }
         }
-        
+
         private void ApplyLoggingSettings()
         {
             try
@@ -197,9 +199,9 @@ namespace Fenceless.Model
                     {
                         logger.MinimumLogLevel = logLevel;
                     }
-                    
+
                     logger.EnableFileOutput = EnableFileLogging;
-                    
+
                     logger.Debug($"Logging settings applied - Level: {LogLevel}, File: {EnableFileLogging}", "AppSettings");
                 }
             }
@@ -208,7 +210,7 @@ namespace Fenceless.Model
                 MessageBox.Show($@"Failed to apply logging settings: {e}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
-        
+
         private void AtomicFileWrite(string path, string content)
         {
             var directory = Path.GetDirectoryName(path);
@@ -216,10 +218,10 @@ namespace Fenceless.Model
             {
                 Directory.CreateDirectory(directory);
             }
-            
+
             var tempPath = path + ".tmp";
             var backupPath = path + ".bak";
-            
+
             try
             {
                 // Write to temporary file
@@ -231,7 +233,7 @@ namespace Fenceless.Model
                     File.Copy(path, backupPath, true);
 
                     // Replace original with temporary file
-                    File.Replace(tempPath,path, backupPath);
+                    File.Replace(tempPath, path, backupPath);
                 }
                 else
                 {
@@ -251,45 +253,45 @@ namespace Fenceless.Model
                 {
                     try { File.Delete(tempPath); } catch { }
                 }
-                
+
                 // Restore from backup if it exists
                 if (File.Exists(backupPath))
                 {
                     try { File.Copy(backupPath, path, true); } catch { }
                 }
-                
+
                 throw;
             }
         }
-        
+
         private string ValidateLogLevel(string logLevel)
         {
             if (string.IsNullOrEmpty(logLevel))
                 return "Info";
-                
+
             var validLevels = new[] { "Debug", "Info", "Warning", "Error", "Critical" };
             return validLevels.Contains(logLevel) ? logLevel : "Info";
         }
-        
+
         private string ValidateShortcut(string shortcut)
         {
             if (string.IsNullOrEmpty(shortcut))
                 return null;
-                
+
             // Basic validation - ensure it contains at least one key
             var parts = shortcut.Split('+');
             if (parts.Length == 0)
                 return null;
-                
+
             // Check for at least one valid key
-            var validKeys = new[] { "Ctrl", "Alt", "Shift", "Windows", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", 
-                                  "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", 
+            var validKeys = new[] { "Ctrl", "Alt", "Shift", "Windows", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
+                                  "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
                                   "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12",
                                   "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" };
-                                  
+
             return parts.Any(p => validKeys.Contains(p.Trim())) ? shortcut : null;
         }
-        
+
         // Helper class for deserialization that doesn't have a constructor
         private class TempSettings
         {
