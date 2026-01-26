@@ -27,7 +27,7 @@ namespace Fenceless.Model
         public FenceManager()
         {
             logger = Logger.Instance;
-            basePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Fenceless");
+            basePath = AppSettings.Instance.appDataPath;
             EnsureDirectoryExists(basePath);
             logger.Info($"FenceManager initialized with base path: {basePath}", "FenceManager");
             InitializeGlobalHotkeys();

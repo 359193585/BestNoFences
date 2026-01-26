@@ -31,8 +31,7 @@ namespace Fenceless.UI
         public LogViewerForm()
         {
             logger = Logger.Instance;
-            var appDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Fenceless");
-            logFilePath = Path.Combine(appDataPath, "application.log");
+            logFilePath = Path.Combine(logger.appDataPath, "application.log");
 
             InitializeComponent();
             LoadLogContent();

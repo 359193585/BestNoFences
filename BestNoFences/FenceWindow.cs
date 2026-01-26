@@ -960,11 +960,10 @@ namespace Fenceless
                 {
                     if (!_fenceInfo.Files.Contains(file) && ItemExists(file))
                     {
-                        _fenceInfo.Files.Add(file);
-                        addedFiles++;
-                        logger.Debug($"Added file to fence: {file}", "FenceWindow");
+                        #region ask user if to delete source link file
 
-                        if (AppSettings.Instance.isDeleteSourceLinkFile == -1) //init value ,ask user
+                        string _isDeletePromptString = "";
+                        if (AppSettings.Instance.isDeleteSourceLinkFile == -1 || AppSettings.Instance.isAskDeleteSourceLinkFile) //init value ,ask user
                         {
                             DialogResult dialogResult = CustomMessageBox.Show(
                                 "Do you want keep source link?",
@@ -974,15 +973,18 @@ namespace Fenceless
                             if (dialogResult == DialogResult.Yes)
                             {
                                 AppSettings.Instance.isDeleteSourceLinkFile = 0;
+                                _isDeletePromptString = "Keep source link file.";
                             }
                             else if (dialogResult == DialogResult.No)
                             {
                                 AppSettings.Instance.isDeleteSourceLinkFile = 1;
+                                _isDeletePromptString = "Delete source link file.";
                             }
                         }
-                        if (AppSettings.Instance.isAskDeleteSourceLinkFile) {
+                        if (AppSettings.Instance.isAskDeleteSourceLinkFile)
+                        {
                             DialogResult dialogResult2 = CustomMessageBox.Show(
-                                "Do you want to keep operating like this in the future? (The settings will not be saved persistently and you will be asked again after the program restarts.)",
+                                $"Do you want always {_isDeletePromptString}? \r\n If you select no, it will ask you again.\r\n\r\n(setting not saved persistently and message will again after program restarts.)",
                                 "Fenceless | Message",
                                 MessageBoxButtons.YesNo,
                                 MessageBoxIcon.Question);
@@ -990,16 +992,21 @@ namespace Fenceless
                             {
                                 AppSettings.Instance.isAskDeleteSourceLinkFile = false;
                             }
+                            
                         }
-                        
 
+                        #endregion
+                        string newFile = file;
                         if (AppSettings.Instance.isDeleteSourceLinkFile == 1)
                         {
-                            // DeleteShortcutFile(file);
+                            newFile = DeleteShortcutFile(file);
                             logger.Debug($"Deleted source link file for: {file}", "FenceWindow");
 
-
                         }
+
+                        _fenceInfo.Files.Add(newFile);
+                        addedFiles++;
+                        logger.Debug($"Added file to fence: {newFile}", "FenceWindow");
                     }
                     else
                     {
@@ -2186,30 +2193,37 @@ namespace Fenceless
         #endregion
 
         #region Shortcut Deletion
-        private void DeleteShortcutFile(string filePath)
+        private string DeleteShortcutFile(string filePath)
         {
+            string newfilepath = filePath; // make a clone
             try
             {
                 if (Path.GetExtension(filePath).Equals(".lnk", StringComparison.OrdinalIgnoreCase))
                 {
                     if (File.Exists(filePath))
                     {
-                        FileAttributes attributes = File.GetAttributes(filePath);
-                        if ((attributes & FileAttributes.ReadOnly) == FileAttributes.ReadOnly)
+                        string shortCutLinkBakPath = AppSettings.Instance.appDataPath + "\\shortcutbak";
+                        if (!Directory.Exists(shortCutLinkBakPath))
                         {
-                            File.SetAttributes(filePath, attributes & ~FileAttributes.ReadOnly);
+                            Directory.CreateDirectory(shortCutLinkBakPath);
                         }
-                        File.Delete(filePath);
-                        logger.Debug($"Deleted shortcut: {filePath}", "DeleteShortcutFile");
-                        if (IsDesktopFile(filePath))
+                        newfilepath = Path.Combine(shortCutLinkBakPath, Path.GetFileName(filePath));
+                        File.Copy(filePath, newfilepath,true);
+                        if (File.Exists(newfilepath))
                         {
-                            logger.Info($"Deleted  shortcut: {Path.GetFileName(filePath)}", "DeleteShortcutFile");
-                            NotifyDesktopChanged();
+                            logger.Debug($"Backed up shortcut to: {newfilepath}", "DeleteShortcutFile");
+                            FileAttributes attributes = File.GetAttributes(filePath);
+                            if ((attributes & FileAttributes.ReadOnly) == FileAttributes.ReadOnly)
+                                File.SetAttributes(filePath, attributes & ~FileAttributes.ReadOnly);
+                            File.Delete(filePath);
+                            logger.Debug($"Deleted shortcut: {filePath}", "DeleteShortcutFile");
+                            if (IsDesktopFile(filePath)) NotifyDesktopChanged();
                         }
-                    }
-                    else
-                    {
-                        logger.Warning($"Shortcut file does not exist: {filePath}", "DeleteShortcutFile");
+                        else
+                        {
+                            logger.Warning($"Failed to back up shortcut to: {newfilepath}", "DeleteShortcutFile");
+                        }
+                       
                     }
                 }
                 else
@@ -2229,6 +2243,7 @@ namespace Fenceless
             {
                 logger.Error($"Error deleting shortcut: {filePath}", "DeleteShortcutFile");
             }
+            return newfilepath;
         }
 
         private bool IsDesktopFile(string filePath)

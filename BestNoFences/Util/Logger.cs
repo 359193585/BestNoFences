@@ -30,10 +30,11 @@ namespace Fenceless.Util
 
         public LogLevel MinimumLogLevel { get; set; } = LogLevel.Debug;
         public bool EnableFileOutput { get; set; } = true;
+        public string appDataPath {  get; set; }
 
         private Logger()
         {
-            var appDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Fenceless");
+            appDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Fenceless");
             Directory.CreateDirectory(appDataPath);
             _logFilePath = Path.Combine(appDataPath, "application.log");
 
