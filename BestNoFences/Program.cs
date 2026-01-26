@@ -97,7 +97,7 @@ namespace Fenceless
                             contextMenu.Items.Add(new ToolStripSeparator()); // -----------------
 
                             // Add auto size menu item with sub ment
-                            var autoSizeFences = new ToolStripMenuItem("Auto Size");
+                            var autoSizeFences = new ToolStripMenuItem("Fences Size");
 
                             var autoSizeLeftMentItem = new ToolStripMenuItem("Size Left");
                             autoSizeLeftMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceLeft();
@@ -107,12 +107,16 @@ namespace Fenceless
                             autoSizeRightMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceRight();
                             var autoSizeFullMentItem = new ToolStripMenuItem("Size Auto");
                             autoSizeFullMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFence();
+                            var autoSizeHideMentItem = new ToolStripMenuItem("Hide All");
+                            autoSizeHideMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceHide();
+
 
                             autoSizeFences.DropDownItems.Add(autoSizeLeftMentItem);
                             autoSizeFences.DropDownItems.Add(autoSizeCenterMentItem);
                             autoSizeFences.DropDownItems.Add(autoSizeRightMentItem);
                             autoSizeFences.DropDownItems.Add(new ToolStripSeparator()); // -----------------
                             autoSizeFences.DropDownItems.Add(autoSizeFullMentItem);
+                            autoSizeFences.DropDownItems.Add(autoSizeHideMentItem);
 
                             contextMenu.Items.Add(autoSizeFences);
                             contextMenu.Items.Add(new ToolStripSeparator()); // -----------------

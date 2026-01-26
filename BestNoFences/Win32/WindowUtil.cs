@@ -49,6 +49,16 @@ namespace Fenceless.Win32
 
         public static readonly IntPtr HWND_BOTTOM = new IntPtr(1);
 
+
+        public const int SM_CXICON = 11;
+        public const int SM_CYICON = 12;
+        public const int LVM_FIRST = 0x1000;
+        public const int LVM_GETITEMSPACING = LVM_FIRST + 51;
+        public const uint LVM_ARRANGE = LVM_FIRST + 22;
+        public const uint LVM_GETITEMCOUNT = LVM_FIRST + 4;
+        public const uint LVA_ALIGNLEFT = 0x0001; // left alignment
+        public const uint LVA_ALIGNRIGHT = 0x0004; // right alignment
+
         [StructLayout(LayoutKind.Sequential)]
         public struct WINDOWPOS
         {
@@ -107,6 +117,20 @@ namespace Fenceless.Win32
 
         [DllImport("shell32.dll")]
         public static extern void SHChangeNotify(uint wEventId,uint uFlags,IntPtr dwItem1,IntPtr dwItem2);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        public static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern IntPtr FindWindowEx(IntPtr hwndParent, IntPtr hwndChildAfter, string lpszClass, string lpszWindow);
+
+        [DllImport("user32.dll")]
+        public static extern int GetSystemMetrics(int nIndex);
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr GetDesktopWindow();
+
 
         #region Window styles
         [Flags]

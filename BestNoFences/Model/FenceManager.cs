@@ -86,6 +86,17 @@ namespace Fenceless.Model
             Rectangle usableArea = new DesktopIconManager().GetUsableScreenArea();
             SizeAllFence(usableArea);
         }
+        public void SizeAllFenceHide()
+        {
+            // get usable screen area, 
+            Rectangle usableArea = new Rectangle(
+                x: Screen.PrimaryScreen.WorkingArea.Width-5,
+                y: Screen.PrimaryScreen.WorkingArea.Height-5,
+                width: 5,
+                height: 5
+                );
+            SizeAllFence(usableArea);
+        }
         public void SizeAllFence(Rectangle usableArea)
         {
             // calculate new layout by number of open forms

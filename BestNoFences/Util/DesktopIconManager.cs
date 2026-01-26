@@ -1,4 +1,5 @@
 ﻿using Fenceless.Util;
+using Fenceless.Win32;
 using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
@@ -6,29 +7,7 @@ using System.Windows.Forms;
 
 public class DesktopIconManager
 {
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern IntPtr FindWindowEx(IntPtr hwndParent, IntPtr hwndChildAfter, string lpszClass, string lpszWindow);
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
-
-    [DllImport("user32.dll")]
-    private static extern int GetSystemMetrics(int nIndex);
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr GetDesktopWindow();
-
-    private const int SM_CXICON = 11;
-    private const int SM_CYICON = 12;
-    private const int LVM_FIRST = 0x1000;
-    private const int LVM_GETITEMSPACING = LVM_FIRST + 51;
-    private const uint LVM_ARRANGE = LVM_FIRST + 22;
-    private const uint LVM_GETITEMCOUNT = LVM_FIRST + 4;
-    private const uint LVA_ALIGNLEFT = 0x0001; // left alignment
-    private const uint LVA_ALIGNRIGHT = 0x0004; // right alignment
+  
 
     private readonly Logger logger;
 
@@ -46,21 +25,21 @@ public class DesktopIconManager
         logger = Logger.Instance;
 
     }
-    public static System.Drawing.Size GetDesktopIconSize()
+    public static Size GetDesktopIconSize()
     {
         IntPtr shellView = GetDesktopListViewHandle();
-        int width = GetSystemMetrics(SM_CXICON);  // SM_CXICON
-        int height = GetSystemMetrics(SM_CYICON); // SM_CYICON
+        int width = WindowUtil.GetSystemMetrics(WindowUtil.SM_CXICON);  // SM_CXICON
+        int height = WindowUtil.GetSystemMetrics(WindowUtil.SM_CYICON); // SM_CYICON
         return new System.Drawing.Size(width, height);
     }
     public static Size GetDesktopIconSpacing()
     {
-        IntPtr desktopWindow = GetDesktopWindow();
-        IntPtr listViewHandle = FindWindowEx(desktopWindow, IntPtr.Zero, "SysListView32", null);
+        IntPtr desktopWindow = WindowUtil.GetDesktopWindow();
+        IntPtr listViewHandle = WindowUtil.FindWindowEx(desktopWindow, IntPtr.Zero, "SysListView32", null);
 
         if (listViewHandle != IntPtr.Zero)
         {
-            IntPtr result = SendMessage(listViewHandle, LVM_GETITEMSPACING, new IntPtr(1), IntPtr.Zero);
+            IntPtr result = WindowUtil.SendMessage(listViewHandle, WindowUtil.LVM_GETITEMSPACING, new IntPtr(1), IntPtr.Zero);
             int spacing = result.ToInt32();
             int width = spacing & 0xFFFF;       
             int height = (spacing >> 16) & 0xFFFF; 
@@ -73,7 +52,6 @@ public class DesktopIconManager
             return new Size(96, 68);
         }
     }
-
     
 
     public static void ArrangeIconsToLeft()
@@ -82,8 +60,11 @@ public class DesktopIconManager
         if (hDesktopListView != IntPtr.Zero)
         {
             // send LVM_ARRANGE, set all icon align left win10/11 can not run
-            SendMessage(hDesktopListView, LVM_ARRANGE, (IntPtr)LVA_ALIGNLEFT, IntPtr.Zero);
+            WindowUtil.SendMessage(hDesktopListView, WindowUtil.LVM_ARRANGE, (IntPtr)WindowUtil.LVA_ALIGNLEFT, IntPtr.Zero);
         }
+        DesktopRegistryManager.SetAutoArrange(true);
+        DesktopRegistryManager.SetAlignToGrid(true);
+        DesktopRegistryManager.RefreshDesktop();
     }
     public static void ArrangeIconsToRight()
     {
@@ -91,8 +72,11 @@ public class DesktopIconManager
         if (hDesktopListView != IntPtr.Zero)
         {
             // send LVM_ARRANGE, set all icon align right win10/11 can not run
-            SendMessage(hDesktopListView, LVM_ARRANGE, (IntPtr)LVA_ALIGNRIGHT, IntPtr.Zero);
+            WindowUtil.SendMessage(hDesktopListView, WindowUtil.LVM_ARRANGE, (IntPtr)WindowUtil.LVA_ALIGNRIGHT, IntPtr.Zero);
         }
+        DesktopRegistryManager.SetAutoArrange(true);
+        DesktopRegistryManager.SetAlignToGrid(true);
+        DesktopRegistryManager.RefreshDesktop();
     }
     
     public  Rectangle EstimateIconsArea(out Size iconSize, out Size iconSpaceSize)
@@ -105,7 +89,7 @@ public class DesktopIconManager
         if (hDesktopListView == IntPtr.Zero)
             return Rectangle.Empty;
 
-        int iconCount = (int)SendMessage(hDesktopListView, LVM_GETITEMCOUNT, IntPtr.Zero, IntPtr.Zero);
+        int iconCount = (int)WindowUtil.SendMessage(hDesktopListView, WindowUtil.LVM_GETITEMCOUNT, IntPtr.Zero, IntPtr.Zero);
         if (iconCount == 0)
             return Rectangle.Empty;
 
@@ -141,12 +125,117 @@ public class DesktopIconManager
 
     private static IntPtr GetDesktopListViewHandle()
     {
-        IntPtr hProgman = FindWindow("Progman", "Program Manager");
-        IntPtr hShellView = FindWindowEx(hProgman, IntPtr.Zero, "SHELLDLL_DefView", null);
+        IntPtr hProgman = WindowUtil.FindWindow("Progman", "Program Manager");
+        IntPtr hShellView = WindowUtil.FindWindowEx(hProgman, IntPtr.Zero, "SHELLDLL_DefView", null);
         if (hShellView == IntPtr.Zero)
         {
-            hShellView = FindWindowEx(IntPtr.Zero, IntPtr.Zero, "SHELLDLL_DefView", null);
+            hShellView = WindowUtil.FindWindowEx(IntPtr.Zero, IntPtr.Zero, "SHELLDLL_DefView", null);
         }
-        return FindWindowEx(hShellView, IntPtr.Zero, "SysListView32", "FolderView");
+        return WindowUtil.FindWindowEx(hShellView, IntPtr.Zero, "SysListView32", "FolderView");
     }
+}
+
+public static class DesktopRegistryManager
+{
+    private const string DESKTOP_REGISTRY_PATH = @"Software\Microsoft\Windows\Shell\Bags\1\Desktop";
+
+    public static bool SetAutoArrange(bool enable)
+    {
+        try
+        {
+            using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(DESKTOP_REGISTRY_PATH, true))
+            {
+                if (key != null)
+                {
+                    // FFNESI: auto arrange  (1=true, 0=false)
+                    key.SetValue("FFNESI", enable ? 1 : 0, Microsoft.Win32.RegistryValueKind.DWord);
+                    RefreshDesktop();
+                    return true;
+                }
+            }
+        }
+        catch
+        {
+        }
+        return false;
+    }
+
+    public static bool SetAlignToGrid(bool enable)
+    {
+        try
+        {
+            using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(DESKTOP_REGISTRY_PATH, true))
+            {
+                if (key != null)
+                {
+                    // IconSpacingX and  IconSpacingY eq  -1 , align to grid
+                    int spacingValue = enable ? -1 : 112; 
+
+                    key.SetValue("IconSpacing", spacingValue, Microsoft.Win32.RegistryValueKind.DWord);
+                    key.SetValue("IconSpacingHorizontal", spacingValue, Microsoft.Win32.RegistryValueKind.DWord);
+                    key.SetValue("IconSpacingVertical", spacingValue, Microsoft.Win32.RegistryValueKind.DWord);
+                    RefreshDesktop();
+                    return true;
+                }
+            }
+        }
+        catch
+        {
+        }
+        return false;
+    }
+
+    public static bool GetAutoArrangeStatus()
+    {
+        try
+        {
+            using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(DESKTOP_REGISTRY_PATH, false))
+            {
+                if (key != null)
+                {
+                    var value = key.GetValue("FFNESI");
+                    if (value != null && value is int intValue)
+                    {
+                        return intValue == 1;
+                    }
+                }
+            }
+        }
+        catch
+        {
+        }
+        return false;
+    }
+
+    public static void RefreshDesktop()
+    {
+        try
+        {
+            // 获取桌面窗口句柄
+            IntPtr hDesktop = WindowUtil.FindWindow("Progman", "Program Manager");
+            if (hDesktop != IntPtr.Zero)
+            {
+                // 只向桌面窗口发送重绘消息
+                RedrawWindow(hDesktop, IntPtr.Zero, IntPtr.Zero,
+                    RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_ALLCHILDREN | RDW_UPDATENOW | RDW_ERASENOW);
+            }
+        }
+        catch
+        {
+        }
+    }
+    [DllImport("user32.dll")]
+    private static extern bool RedrawWindow(IntPtr hWnd, IntPtr lprcUpdate, IntPtr hrgnUpdate, uint flags);
+    private const uint WM_SYSCOMMAND = 0x0112;
+    private const uint SC_MONITORPOWER = 0xF170;
+    private const uint WM_SETTINGCHANGE = 0x001A;
+
+    // 重绘标志
+    private const uint RDW_INVALIDATE = 0x0001;
+    private const uint RDW_ERASE = 0x0004;
+    private const uint RDW_FRAME = 0x0400;
+    private const uint RDW_ALLCHILDREN = 0x0080;
+    private const uint RDW_UPDATENOW = 0x0100;
+    private const uint RDW_ERASENOW = 0x0200;
+
 }
