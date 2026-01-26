@@ -84,6 +84,10 @@ namespace Fenceless.Model
             DesktopIconManager.ArrangeIconsToLeft();
             // get usable screen area, 
             Rectangle usableArea = new DesktopIconManager().GetUsableScreenArea();
+            SizeAllFence(usableArea);
+        }
+        public void SizeAllFence(Rectangle usableArea)
+        {
             // calculate new layout by number of open forms
             int myFormCount = Application.OpenForms.Count;
             List<Rectangle> layoutResult = FormLayoutCalculator.CalculateLayoutOnPrimaryScreen(myFormCount, usableArea, preferMoreRows: false);
@@ -97,6 +101,42 @@ namespace Fenceless.Model
                 f.Height = layoutResult[kk].Height;
                 kk++;
             }
+        }
+        public void SizeAllFenceLeft()
+        {
+            // try move desktop icons arranged to right, but win10/11  not doing it properly
+            DesktopIconManager.ArrangeIconsToRight();
+            // half screen area minus desktop icons area
+            Rectangle usableArea = new Rectangle(
+                x: 0,
+                y: 0,
+                width: Screen.PrimaryScreen.WorkingArea.Width/2,
+                height: Screen.PrimaryScreen.WorkingArea.Height
+                );
+            SizeAllFence(usableArea);
+        }
+        public void SizeAllFenceCenter()
+        {
+            Rectangle usableArea = new Rectangle(
+                x: Screen.PrimaryScreen.WorkingArea.Width / 4,
+                y: 0,
+                width: Screen.PrimaryScreen.WorkingArea.Width / 2,
+                height: Screen.PrimaryScreen.WorkingArea.Height
+                );
+            SizeAllFence(usableArea);
+        }
+        public void SizeAllFenceRight()
+        {
+            // try move desktop icons arranged to left, but win10/11  not doing it properly
+            DesktopIconManager.ArrangeIconsToLeft();
+            // half screen area minus desktop icons area
+            Rectangle usableArea = new Rectangle(
+                x: Screen.PrimaryScreen.WorkingArea.Width / 2,
+                y: 0,
+                width: Screen.PrimaryScreen.WorkingArea.Width / 2,
+                height: Screen.PrimaryScreen.WorkingArea.Height
+                );
+            SizeAllFence(usableArea);
         }
         public void LoadFences()
         {

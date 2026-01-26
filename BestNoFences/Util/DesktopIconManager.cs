@@ -28,6 +28,7 @@ public class DesktopIconManager
     private const uint LVM_ARRANGE = LVM_FIRST + 22;
     private const uint LVM_GETITEMCOUNT = LVM_FIRST + 4;
     private const uint LVA_ALIGNLEFT = 0x0001; // left alignment
+    private const uint LVA_ALIGNRIGHT = 0x0004; // right alignment
 
     private readonly Logger logger;
 
@@ -84,7 +85,16 @@ public class DesktopIconManager
             SendMessage(hDesktopListView, LVM_ARRANGE, (IntPtr)LVA_ALIGNLEFT, IntPtr.Zero);
         }
     }
-
+    public static void ArrangeIconsToRight()
+    {
+        IntPtr hDesktopListView = GetDesktopListViewHandle();
+        if (hDesktopListView != IntPtr.Zero)
+        {
+            // send LVM_ARRANGE, set all icon align right win10/11 can not run
+            SendMessage(hDesktopListView, LVM_ARRANGE, (IntPtr)LVA_ALIGNRIGHT, IntPtr.Zero);
+        }
+    }
+    
     public  Rectangle EstimateIconsArea(out Size iconSize, out Size iconSpaceSize)
     {
         ArrangeIconsToLeft();

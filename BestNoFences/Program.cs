@@ -96,11 +96,25 @@ namespace Fenceless
 
                             contextMenu.Items.Add(new ToolStripSeparator()); // -----------------
 
-                            // Add auto size ment item
+                            // Add auto size menu item with sub ment
                             var autoSizeFences = new ToolStripMenuItem("Auto Size");
-                            autoSizeFences.Click += (s, e) => FenceManager.Instance.SizeAllFence();
-                            contextMenu.Items.Add(autoSizeFences);
 
+                            var autoSizeLeftMentItem = new ToolStripMenuItem("Size Left");
+                            autoSizeLeftMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceLeft();
+                            var autoSizeCenterMentItem = new ToolStripMenuItem("Size Center");
+                            autoSizeCenterMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceCenter();
+                            var autoSizeRightMentItem = new ToolStripMenuItem("Size Right");
+                            autoSizeRightMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceRight();
+                            var autoSizeFullMentItem = new ToolStripMenuItem("Size Auto");
+                            autoSizeFullMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFence();
+
+                            autoSizeFences.DropDownItems.Add(autoSizeLeftMentItem);
+                            autoSizeFences.DropDownItems.Add(autoSizeCenterMentItem);
+                            autoSizeFences.DropDownItems.Add(autoSizeRightMentItem);
+                            autoSizeFences.DropDownItems.Add(new ToolStripSeparator()); // -----------------
+                            autoSizeFences.DropDownItems.Add(autoSizeFullMentItem);
+
+                            contextMenu.Items.Add(autoSizeFences);
                             contextMenu.Items.Add(new ToolStripSeparator()); // -----------------
 
                             // Add Start with Windows checkbox
