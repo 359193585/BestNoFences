@@ -150,7 +150,7 @@ namespace Fenceless
                 {
                     try
                     {
-                        var result = MessageBox.Show(this,
+                        DialogResult result = CustomMessageBox.Show(
                             $"Remove '{Path.GetFileName(hoveringItem)}' from this fence?\n\nThis will not delete the file, only remove it from the fence.",
                             "Remove Item",
                             MessageBoxButtons.YesNo,
@@ -907,7 +907,7 @@ namespace Fenceless
         private void exitToolStripMenuItem_Click(object sender, EventArgs e)
         {
             string fenceName = _fenceInfo.Name;
-            if (MessageBox.Show(this, $"Really remove this fence? \r\n fence name = {_fenceInfo.Name}", "Remove", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            if (CustomMessageBox.Show( $"Really remove this fence? \r\n fence name = {_fenceInfo.Name}", "Remove", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             {
                 FenceManager.Instance.RemoveFence(_fenceInfo);
                 Close();
