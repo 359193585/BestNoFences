@@ -2,7 +2,6 @@
 using System;
 using System.Drawing;
 using System.IO;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.Header;
 
 namespace Fenceless.Util
 {
@@ -178,22 +177,6 @@ namespace Fenceless.Util
             if (IsDraggingItem)
             {
                 DragTargetIndex = GetGridPositionIndex(currentPos, scrollOffset, titleHeight, itemWidth, textHeight, windowWidth);
-
-
-                //int columns = Math.Max(1, windowWidth / itemWidth);
-                //int absX = currentPos.X;
-                //int absY = currentPos.Y + scrollOffset - titleHeight;
-
-                //int row = absY / textHeight;
-                //int col = absX / itemWidth;
-                //DragTargetIndex = (row * columns) + col;
-                //DragTargetIndex = Math.Max(0, Math.Min(DragTargetIndex, _fenceInfo.Files.Count - 1));
-
-                //int itemHeight = _fenceInfo.IconSize + textHeight + 10;
-                //int targetX = (DragTargetIndex % columns) * itemWidth;
-                //int targetY = (DragTargetIndex / columns) * itemHeight + titleHeight - scrollOffset;
-
-                //DraggingTargetRect = new Rectangle(targetX, targetY, itemWidth, itemHeight);
             }
 
         }

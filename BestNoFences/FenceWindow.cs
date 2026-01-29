@@ -412,17 +412,6 @@ namespace Fenceless
             SetWindowPos(Handle, HWND_BOTTOM, 0, 0, 0, 0,
                 SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
         }
-
-      
-        private void HandleDisplayChangeGrid(int newScreenWidth, int newScreenHeight)
-        {
-            // Resize all fences
-            FenceManager.Instance.SizeAllFence();
-            // sure position is in screen bounds
-            EnsureFenceVisible();
-        }
-     
-
         private void RemoveSelectedItem()
         {
             if (selectedItem != null)
@@ -614,7 +603,7 @@ namespace Fenceless
                         string newFile = file;
                         if (AppSettings.Instance.isDeleteSourceLinkFile == 1)
                         {
-                            newFile = DeleteShortcutFile(file);
+                            newFile = DeleteSourceShortcutFile(file);
                             logger.Debug($"Deleted source link file for: {file}", "FenceWindow");
                         }
 
@@ -655,84 +644,6 @@ namespace Fenceless
 
         private void FenceWindow_MouseMove(object sender, MouseEventArgs e)
         {
-#if nouse
-            // first handle form dragging
-            if (_isFormDrag && e.Button == MouseButtons.Left && !_isDraggingForm)
-            {
-                // calculate movement distance
-                int moveX = Math.Abs(e.X - _formDragStartPoint.X);
-                int moveY = Math.Abs(e.Y - _formDragStartPoint.Y);
-
-                // if movement exceeds threshold, start form drag
-                if (moveX > SystemInformation.DragSize.Width / 2 ||
-                    moveY > SystemInformation.DragSize.Height / 2)
-                {
-                    StartFormDrag();
-                    return; 
-                }
-            }
-            // Handle internal item dragging
-            if (isDraggingItem && !lockedToolStripMenuItem.Checked)
-            {
-                dragCurrentPoint = e.Location;
-
-                // Update target position for drop indicator
-                UpdateDragTarget(e.Location);
-
-                // Use throttled refresh during drag to prevent excessive repainting
-                if (dragRefreshTimer == null)
-                {
-                    dragRefreshTimer = new FormsTimer();
-                    dragRefreshTimer.Interval = 16; // ~60 FPS max
-                    dragRefreshTimer.Tick += (s, args) =>
-                    {
-                        if (isDraggingItem)
-                        {
-                            Invalidate();
-                        }
-                        else
-                        {
-                            dragRefreshTimer.Stop();
-                            dragRefreshTimer.Dispose();
-                            dragRefreshTimer = null;
-                        }
-                    };
-                    dragRefreshTimer.Start();
-                }
-                return;
-            }
-
-            // Check if we should start dragging
-            if (e.Button == MouseButtons.Left && !isDraggingItem && selectedItem != null && !lockedToolStripMenuItem.Checked)
-            {
-                // Only start drag if the item still exists
-                if (ItemExists(selectedItem))
-                {
-                    var dragDistance = Math.Sqrt(Math.Pow(e.X - dragStartPoint.X, 2) + Math.Pow(e.Y - dragStartPoint.Y, 2));
-                    if (dragDistance >= DragThreshold)
-                    {
-                        StartItemDrag(selectedItem, e.Location);
-                        return;
-                    }
-                }
-                else
-                {
-                    // Item no longer exists, clear selection
-                    logger.Warning($"Selected item no longer exists: {selectedItem}", "FenceWindow");
-                    _fenceInfo.Files.Remove(selectedItem);
-                    selectedItem = null;
-                    Save();
-                    Refresh();
-                }
-            }
-
-            // Only refresh if not dragging to avoid excessive repaints
-            if (!isDraggingItem)
-            {
-                Refresh();
-            }
-#endif
-
             if (_isFormDrag && e.Button == MouseButtons.Left && !_isDraggingForm)
             {
                 if (Math.Abs(e.X - _formDragStartPoint.X) > SystemInformation.DragSize.Width / 2 ||
@@ -1279,12 +1190,12 @@ namespace Fenceless
         }
 
         #region Shortcut Deletion
-        private string DeleteShortcutFile(string filePath)
+        private string DeleteSourceShortcutFile(string filePath)
         {
             string newfilepath = filePath; // make a clone
             try
             {
-                if (Path.GetExtension(filePath).Equals(".lnk", StringComparison.OrdinalIgnoreCase))
+                if (Path.GetExtension(filePath).Equals(".lnk", StringComparison.OrdinalIgnoreCase))  //only delete .lnk files
                 {
                     if (File.Exists(filePath))
                     {
