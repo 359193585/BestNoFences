@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Windows.Forms;
 
 /// <summary>
 /// Calculate the size of the rectangular grid according to the number of windows and return it.

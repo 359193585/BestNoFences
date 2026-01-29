@@ -109,7 +109,8 @@ namespace Fenceless
                             var autoSizeFullMentItem = new ToolStripMenuItem("Size Auto");
                             autoSizeFullMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFence();
                             var autoSizeHideMentItem = new ToolStripMenuItem("Hide All");
-                            autoSizeHideMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceHide();
+                            //autoSizeHideMentItem.Click += (s, e) => FenceManager.Instance.HideAllFences();
+                            autoSizeHideMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceMiniRightBottom();
 
 
                             autoSizeFences.DropDownItems.Add(autoSizeLeftMentItem);

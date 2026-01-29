@@ -7,8 +7,6 @@ using System.Windows.Forms;
 
 public class DesktopIconManager
 {
-  
-
     private readonly Logger logger;
 
     [Guid("1af3a467-213b-42c5-83e0-47844020a173"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]

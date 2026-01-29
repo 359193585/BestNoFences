@@ -21,13 +21,7 @@ namespace Fenceless
         private int titleHeight;
         private const int titleOffset = 3;
         private const int itemWidth = 75;
-        private const int itemHeight = 32 + itemPadding + textHeight;
         private const int textHeight = 35;
-        private const int itemPadding = 15;
-        private const float shadowDist = 1.5f;
-
-        private readonly FenceInfo _fenceInfo;
-        private readonly Logger logger;
 
         private Font titleFont;
         private Font iconFont;
@@ -36,42 +30,44 @@ namespace Fenceless
         private string hoveringItem;
         private bool shouldUpdateSelection;
         private bool shouldRunDoubleClick;
-        private bool hasSelectionUpdated;
-        private bool hasHoverUpdated;
         private bool isMinified;
         private int prevHeight;
-
         private int scrollHeight;
         private int scrollOffset;
 
         // New fields for transparency and autohide
         private bool isAutoHidden = false;
-        private FormsTimer autoHideTimer;
         private double normalOpacity = 1.0;
         private bool isMouseInside = false;
-
+        private FormsTimer autoHideTimer;
         // Visibility monitor to prevent Show Desktop from hiding the window
         private System.Threading.Timer visibilityMonitor;
 
         // Internal drag and drop fields
         private bool isDraggingItem = false;
         private string draggingItem = null;
-        private Point dragStartPoint;
         private Point dragCurrentPoint;
         private int dragTargetIndex = -1;
-        private const int DragThreshold = 5; // Minimum distance to start drag
 
-        // Thread-safe icon cache with automatic memory management
-        private readonly IconCache iconCache = new IconCache(50);
+        private bool _isDragReady = false;
+        private bool _isFormDrag = false;
+        private Point _formDragStartPoint = Point.Empty;
+        private bool _isDraggingForm = false;
+
         private FormsTimer dragRefreshTimer;
         #endregion
 
+        // Thread-safe icon cache with automatic memory management
+        private readonly IconCache iconCache = new IconCache(50);
         private readonly ThrottledExecution throttledMove = new ThrottledExecution(TimeSpan.FromSeconds(4));
         private readonly ThrottledExecution throttledResize = new ThrottledExecution(TimeSpan.FromSeconds(4));
-
         private readonly ShellContextMenu shellContextMenu = new ShellContextMenu();
-
         private readonly ThumbnailProvider thumbnailProvider = new ThumbnailProvider();
+        private readonly FenceInfo _fenceInfo;
+        private readonly Logger logger;
+        private FenceRenderer _fenceRenderer;  // Declare the renderer instance
+        private FenceInteractionHandler _handler; 
+
         public FenceWindow(FenceInfo fenceInfo)
         {
             _fenceInfo = fenceInfo;
@@ -80,6 +76,7 @@ namespace Fenceless
             logger.Debug($"Creating fence window for '{fenceInfo.Name}'", "FenceWindow");
 
             _fenceRenderer = new FenceRenderer(_fenceInfo, logger);// rendering process
+            _handler = new FenceInteractionHandler(_fenceInfo, logger);
 
             // Set form properties to hide from Alt+Tab before initialization
             this.ShowInTaskbar = false;
@@ -93,7 +90,7 @@ namespace Fenceless
             logicalTitleHeight = (fenceInfo.TitleHeight < 16 || fenceInfo.TitleHeight > 100) ? 35 : fenceInfo.TitleHeight;
             titleHeight = LogicalToDeviceUnits(logicalTitleHeight);
 
-            this.MouseWheel += FenceWindow_MouseWheel;
+            MouseWheel += FenceWindow_MouseWheel;
             thumbnailProvider.IconThumbnailLoaded += ThumbnailProvider_IconThumbnailLoaded;
 
             ReloadFonts();
@@ -225,31 +222,6 @@ namespace Fenceless
                 logger.Error($"Error checking if item exists: {path}", "FenceWindow", ex);
                 return false;
             }
-        }
-
-      
-        private void ClearOldCacheEntries()
-        {
-            try
-            {
-                // Clear the cache - the LRU cache will handle automatic cleanup
-                iconCache.ClearCache();
-                logger.Debug("Icon cache cleared", "FenceWindow");
-            }
-            catch (Exception ex)
-            {
-                logger.Error("Error clearing icon cache", "FenceWindow", ex);
-            }
-        }
-
-        private void fenceSettingsToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            FenceManager.Instance.ShowGlobalSettings();
-        }
-
-        private void globalSettingsToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            FenceManager.Instance.ShowGlobalSettings();
         }
 
         private void settingsToolStripMenuItem_Click(object sender, EventArgs e)
@@ -388,7 +360,6 @@ namespace Fenceless
             autoHideTimer.Stop();
         }
 
-
         private void InitializeVisibilityMonitor()
         {
             visibilityMonitor = new System.Threading.Timer(_ => EnsureFenceVisible(true), null,
@@ -436,8 +407,6 @@ namespace Fenceless
             }
         }
 
-      
-
         private void SendToDesktopBack()
         {
             SetWindowPos(Handle, HWND_BOTTOM, 0, 0, 0, 0,
@@ -452,9 +421,6 @@ namespace Fenceless
             // sure position is in screen bounds
             EnsureFenceVisible();
         }
-
-
-
      
 
         private void RemoveSelectedItem()
@@ -689,6 +655,7 @@ namespace Fenceless
 
         private void FenceWindow_MouseMove(object sender, MouseEventArgs e)
         {
+#if nouse
             // first handle form dragging
             if (_isFormDrag && e.Button == MouseButtons.Left && !_isDraggingForm)
             {
@@ -764,68 +731,105 @@ namespace Fenceless
             {
                 Refresh();
             }
+#endif
+
+            if (_isFormDrag && e.Button == MouseButtons.Left && !_isDraggingForm)
+            {
+                if (Math.Abs(e.X - _formDragStartPoint.X) > SystemInformation.DragSize.Width / 2 ||
+                    Math.Abs(e.Y - _formDragStartPoint.Y) > SystemInformation.DragSize.Height / 2)
+                {
+                    StartFormDrag();
+                    return;
+                }
+            }
+            if (_isDragReady && !_handler.IsDraggingItem)
+            {
+                if (_handler.ShouldStartItemDrag(e.Location))
+                {
+                    this.Cursor = Cursors.Hand;
+                    this.Text = $"{_fenceInfo.Name} - Dragging {Path.GetFileName(_handler.DraggingItemPath)}";
+                    StartDragTimer(); //  Start throttled refresh timer
+                }
+            }
+            _handler.ProcessMouseMove(e.Location, scrollOffset, titleHeight, itemWidth, textHeight, Width);
+
+            if (!_handler.IsDraggingItem) Refresh();
         }
-        private bool _isFormDrag = false;
-        private Point _formDragStartPoint = Point.Empty;
-        private bool _isDraggingForm = false;
+        // Unified frame-rate limited timer handling (maintain 60FPS rendering)
+        private void StartDragTimer()
+        {
+            if (dragRefreshTimer == null)
+            {
+                dragRefreshTimer = new FormsTimer { Interval = 16 };
+                dragRefreshTimer.Tick += (s, a) => {
+                    if (_handler.IsDraggingItem) Invalidate();
+                    else StopDragTimer(); 
+                };
+                dragRefreshTimer.Start();
+            }
+        }
+        private void StopDragTimer()
+        {
+            dragRefreshTimer?.Stop();
+        }
 
         private void FenceWindow_MouseDown(object sender, MouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Left && !lockedToolStripMenuItem.Checked)
+            if (e.Button == MouseButtons.Left)
             {
-                dragStartPoint = e.Location;
+                var action = _handler.HandleMouseDown(e.Location, lockedToolStripMenuItem.Checked,
+                    scrollOffset, titleHeight, itemWidth, textHeight, Width, out string targetPath);
 
-                // Find item under cursor
-                var itemPath = GetItemAtPosition(e.Location);
-                if (itemPath != null && ItemExists(itemPath))
+                if (action == ClickActionResult.DragItem)
                 {
-                    selectedItem = itemPath;
+                    _isDragReady = true;
                     _isFormDrag = false;
-                    Refresh();
+                    _handler.PrepareDrag(targetPath, e.Location); // 准备数据，但不开启 IsDraggingItem
+                    draggingItem = targetPath;
+                    selectedItem = targetPath;
+                    this.Cursor = Cursors.Hand;
                 }
-                else if (itemPath != null)
-                {
-                    // Item no longer exists, remove it from the fence
-                    logger.Warning($"Item no longer exists, removing from fence: {itemPath}", "FenceWindow");
-                    _fenceInfo.Files.Remove(itemPath);
-                    selectedItem = null;
-                    Save();
-                    Refresh();
-                    _isFormDrag = false;
-                }
-                else
-                {
-                    _isFormDrag = true;
-                    _formDragStartPoint = e.Location;
-                    selectedItem = null;
-                }
-            }
-            else if (e.Button == MouseButtons.Left && lockedToolStripMenuItem.Checked)
-            {
-                //if locked, allow form dragging only
-                var itemPath = GetItemAtPosition(e.Location);
-                if (itemPath == null)
+                else if (action == ClickActionResult.DragForm)
                 {
                     _isFormDrag = true;
                     _formDragStartPoint = e.Location;
                 }
+                else if (action == ClickActionResult.ItemRemoved)
+                    this.Refresh(); 
             }
+          
         }
 
         private void FenceWindow_MouseUp(object sender, MouseEventArgs e)
         {
-            if (isDraggingItem && e.Button == MouseButtons.Left)
+            _isDragReady = false;
+            if (_handler.IsDraggingItem)
             {
-                CompleteDrag(e.Location);
+                bool changed = _handler.CompleteDragReorder(draggingItem, e.Location,
+                    scrollOffset, titleHeight, itemWidth, textHeight, Width);
+                ResetDragUI();
+                if (changed) Refresh();
             }
-            // end form dragging
-            if (_isDraggingForm)
-            {
-                _isDraggingForm = false;
-                SaveFormPosition();
-            }
-
             _isFormDrag = false;
+            _isDraggingForm = false;
+        }
+        private void ResetDragUI()
+        {
+            isDraggingItem = false;
+            draggingItem = null;
+            dragTargetIndex = -1;
+            this.Cursor = Cursors.Default;
+            this.Text = _fenceInfo.Name;
+            
+            // Stop drag refresh timer
+            if (dragRefreshTimer != null)
+            {
+                dragRefreshTimer.Stop();
+                dragRefreshTimer.Dispose();
+                dragRefreshTimer = null;
+            }
+            Invalidate();
+            Refresh();
         }
         private void SaveFormPosition()
         {
@@ -864,12 +868,13 @@ namespace Fenceless
             StartAutoHideTimer();
             Minify();
 
-            // Cancel drag operation if mouse leaves the window
+            // If dragging is in progress, execute cancellation logic
             if (isDraggingItem)
             {
-                CancelDrag();
+                _handler.HandleCancelDrag(draggingItem);
+                ResetDragUI();
             }
-
+            // Clear selection and refresh UI
             selectedItem = null;
             Refresh();
         }
@@ -883,107 +888,11 @@ namespace Fenceless
                 ReleaseCapture();
                 SendMessage(this.Handle, WM_NCLBUTTONDOWN, HT_CAPTION, 0);
 
-                // 记录拖动开始的位置
                 _formDragStartPoint = this.Location;
-
                 logger.Debug("Started form drag", "FenceWindow");
             }
         }
-        private void CompleteDrag(Point dropLocation)
-        {
-            if (!isDraggingItem || draggingItem == null) return;
-
-            try
-            {
-                // Verify the dragged item still exists
-                if (!ItemExists(draggingItem))
-                {
-                    logger.Warning($"Dragged item no longer exists: {draggingItem}", "FenceWindow");
-                    _fenceInfo.Files.Remove(draggingItem);
-                    selectedItem = null;
-                    Save();
-                    return;
-                }
-
-                var currentIndex = _fenceInfo.Files.IndexOf(draggingItem);
-                var targetIndex = GetGridPositionIndex(dropLocation);
-
-                // Clamp target index to valid range
-                targetIndex = Math.Max(0, Math.Min(targetIndex, _fenceInfo.Files.Count - 1));
-
-                if (currentIndex != targetIndex && currentIndex >= 0)
-                {
-                    // Remove item from current position
-                    _fenceInfo.Files.RemoveAt(currentIndex);
-
-                    // Adjust target index if we removed an item before it
-                    if (targetIndex > currentIndex)
-                        targetIndex--;
-
-                    // Insert item at new position
-                    _fenceInfo.Files.Insert(targetIndex, draggingItem);
-
-                    // Update selection to follow the moved item
-                    selectedItem = draggingItem;
-
-                    Save();
-                    logger.Info($"Moved item '{Path.GetFileName(draggingItem)}' from position {currentIndex} to {targetIndex} in fence '{_fenceInfo.Name}'", "FenceWindow");
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.Error($"Failed to complete drag operation in fence '{_fenceInfo.Name}'", "FenceWindow", ex);
-            }
-            finally
-            {
-                // Reset drag state
-                isDraggingItem = false;
-                draggingItem = null;
-                dragTargetIndex = -1;
-                this.Cursor = Cursors.Default;
-
-                // Stop drag refresh timer
-                if (dragRefreshTimer != null)
-                {
-                    dragRefreshTimer.Stop();
-                    dragRefreshTimer.Dispose();
-                    dragRefreshTimer = null;
-                }
-
-                // Restore original title
-                this.Text = _fenceInfo.Name;
-
-                // Force a final refresh
-                Invalidate();
-            }
-        }
-
-        private void CancelDrag()
-        {
-            if (isDraggingItem)
-            {
-                logger.Debug($"Cancelled drag operation for item '{Path.GetFileName(draggingItem)}' in fence '{_fenceInfo.Name}'", "FenceWindow");
-
-                isDraggingItem = false;
-                draggingItem = null;
-                dragTargetIndex = -1;
-                this.Cursor = Cursors.Default;
-
-                // Stop drag refresh timer
-                if (dragRefreshTimer != null)
-                {
-                    dragRefreshTimer.Stop();
-                    dragRefreshTimer.Dispose();
-                    dragRefreshTimer = null;
-                }
-
-                // Restore original title
-                this.Text = _fenceInfo.Name;
-
-                Refresh();
-            }
-        }
-
+        
         private void Minify()
         {
             if (minifyToolStripMenuItem.Checked && !isMinified)
@@ -1019,43 +928,21 @@ namespace Fenceless
 
         private void FenceWindow_DoubleClick(object sender, EventArgs e)
         {
-            // Only handle double-click if we're not dragging and not in a drag gesture
             if (!isDraggingItem && selectedItem != null)
             {
-                // Get the current mouse position and check if it's over an item
-                var mousePos = PointToClient(MousePosition);
-                var itemPath = GetItemAtPosition(mousePos);
+                // Delegate double-click business to the handler
+                bool needsRefresh = _handler.HandleDoubleClick(
+                    PointToClient(MousePosition),
+                    selectedItem,
+                    scrollOffset, titleHeight, itemWidth, textHeight, Width,
+                    out string newSelectedItem);
 
-                // Verify the double-clicked item still exists and matches the selected item
-                if (itemPath != null && itemPath == selectedItem && ItemExists(itemPath))
-                {
-                    // Open the item directly
-                    var entry = FenceEntry.FromPath(itemPath);
-                    if (entry != null)
-                    {
-                        logger.Info($"Double-clicked item '{System.IO.Path.GetFileName(itemPath)}' in fence '{_fenceInfo.Name}'", "FenceWindow");
-                        entry.Open();
-                    }
-                    else
-                    {
-                        logger.Warning($"Could not create entry for item: {itemPath}", "FenceWindow");
-                    }
-                }
-                else if (itemPath != null && !ItemExists(itemPath))
-                {
-                    // Item no longer exists, remove it
-                    logger.Warning($"Double-clicked item no longer exists, removing: {itemPath}", "FenceWindow");
-                    _fenceInfo.Files.Remove(itemPath);
-                    selectedItem = null;
-                    Save();
-                    Refresh();
-                }
+                this.selectedItem = newSelectedItem;
+
+                if (needsRefresh)Refresh();
             }
         }
-
-        // 声明渲染器实例
-        // Declare the renderer instance
-        private FenceRenderer _fenceRenderer;
+       
         private void FenceWindow_Paint(object sender, PaintEventArgs e)
         {
             try
@@ -1251,13 +1138,6 @@ namespace Fenceless
             }
         }
 
-        // Improve the Save method with better error handling
-        private readonly object saveLock = new object();
-
-        /// <summary>
-        /// Validates all items in the fence and removes any that no longer exist
-        /// </summary>
-        /// <returns>Number of items removed</returns>
         private int ValidateAndCleanupItems()
         {
             try
@@ -1298,22 +1178,7 @@ namespace Fenceless
             }
         }
 
-        private void Save()
-        {
-            lock (saveLock)
-            {
-                try
-                {
-                    FenceManager.Instance.UpdateFence(_fenceInfo);
-                    logger.Debug($"Fence '{_fenceInfo.Name}' saved successfully", "FenceWindow");
-                }
-                catch (Exception ex)
-                {
-                    logger.Error($"Failed to save fence '{_fenceInfo.Name}'", "FenceWindow", ex);
-                }
-            }
-        }
-
+        private void Save() => FenceManager.Instance.UpdateFence(_fenceInfo);
         private void FenceWindow_LocationChanged(object sender, EventArgs e)
         {
             throttledMove.Run(() =>
@@ -1340,12 +1205,6 @@ namespace Fenceless
                 Save();
                 Refresh();
             }
-        }
-
-        private void titleSizeToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            // Redirect to global settings where title height can be configured
-            FenceManager.Instance.ShowGlobalSettings();
         }
 
         private void FenceWindow_MouseClick(object sender, MouseEventArgs e)
@@ -1379,7 +1238,7 @@ namespace Fenceless
                     return;
                 }
 
-                var fileName = System.IO.Path.GetFileName(filePath);
+                var fileName = Path.GetFileName(filePath);
                 logger.Info($"Removing '{fileName}' from fence '{_fenceInfo.Name}' via context menu", "FenceWindow");
 
                 // Only remove from the fence list, don't delete the actual file
@@ -1418,98 +1277,6 @@ namespace Fenceless
         {
             Invalidate();
         }
-
-        #region Internal Drag and Drop
-
-        private string GetItemAtPosition(Point position)
-        {
-            var itemSpacing = _fenceInfo.ItemSpacing;
-            var iconSize = _fenceInfo.IconSize;
-            var actualItemWidth = Math.Max(iconSize + 10, itemWidth);
-            var actualItemHeight = iconSize + textHeight + 10;
-
-            var x = itemSpacing;
-            var y = itemSpacing;
-
-            foreach (var file in _fenceInfo.Files)
-            {
-                var entry = FenceEntry.FromPath(file);
-                if (entry == null)
-                    continue;
-
-                var itemRect = new Rectangle(x, y + titleHeight - scrollOffset, actualItemWidth, actualItemHeight);
-
-                if (itemRect.Contains(position))
-                {
-                    return file;
-                }
-
-                x += actualItemWidth + itemSpacing;
-                if (x + actualItemWidth > Width)
-                {
-                    x = itemSpacing;
-                    y += actualItemHeight + itemSpacing;
-                }
-            }
-
-            return null;
-        }
-
-        private int GetGridPositionIndex(Point position)
-        {
-            var itemSpacing = _fenceInfo.ItemSpacing;
-            var iconSize = _fenceInfo.IconSize;
-            var actualItemWidth = Math.Max(iconSize + 10, itemWidth);
-            var actualItemHeight = iconSize + textHeight + 10;
-
-            var contentY = position.Y - titleHeight + scrollOffset;
-            var itemsPerRow = Math.Max(1, (Width - itemSpacing) / (actualItemWidth + itemSpacing));
-
-            var row = Math.Max(0, (contentY - itemSpacing) / (actualItemHeight + itemSpacing));
-            var col = Math.Max(0, (position.X - itemSpacing) / (actualItemWidth + itemSpacing));
-
-            col = Math.Min(col, itemsPerRow - 1);
-
-            var index = (int)(row * itemsPerRow + col);
-            return Math.Min(index, _fenceInfo.Files.Count);
-        }
-
-        private void StartItemDrag(string itemPath, Point startLocation)
-        {
-            // Verify item still exists before starting drag
-            if (!ItemExists(itemPath))
-            {
-                logger.Warning($"Cannot drag item that no longer exists: {itemPath}", "FenceWindow");
-                _fenceInfo.Files.Remove(itemPath);
-                selectedItem = null;
-                Save();
-                Refresh();
-                return;
-            }
-
-            isDraggingItem = true;
-            draggingItem = itemPath;
-            dragCurrentPoint = startLocation;
-
-            // Set cursor to indicate dragging
-            this.Cursor = Cursors.Hand;
-
-            // Update window title to show drag status
-            this.Text = $"{_fenceInfo.Name} - Dragging {Path.GetFileName(itemPath)}";
-
-            logger.Debug($"Started dragging item '{Path.GetFileName(itemPath)}' in fence '{_fenceInfo.Name}'", "FenceWindow");
-        }
-
-        private void UpdateDragTarget(Point currentLocation)
-        {
-            if (!isDraggingItem) return;
-
-            dragTargetIndex = GetGridPositionIndex(currentLocation);
-        }
-
-        #endregion
-
-       
 
         #region Shortcut Deletion
         private string DeleteShortcutFile(string filePath)
@@ -1602,11 +1369,13 @@ namespace Fenceless
                 int newWidth = (int)m.LParam & 0xFFFF;  // lParam low 16 bits is width
                 int newHeight = (int)m.LParam >> 16;    // lParam high 16 bits is height
                 int colorDepth = (int)m.WParam;         // wParam means color depth
-
-                // handle screen resolution change
-                HandleDisplayChangeGrid(newWidth, newHeight);
                 _fenceInfo.ScreenX = newWidth;
                 _fenceInfo.ScreenY = newHeight;
+
+                //// handle screen resolution change
+                //HandleDisplayChangeGrid(newWidth, newHeight);
+                FenceManager.Instance.SizeAllFence();
+                EnsureFenceVisible();
             }
 
             // Remove border
@@ -1741,13 +1510,13 @@ namespace Fenceless
                     m.Result = new IntPtr(HTRIGHT);
             }
         }
-
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
             // Handle Escape key to cancel dragging
             if (keyData == Keys.Escape && isDraggingItem)
             {
-                CancelDrag();
+                _handler.HandleCancelDrag(draggingItem);
+                ResetDragUI();
                 return true;
             }
 
@@ -1780,8 +1549,6 @@ namespace Fenceless
 
             return base.ProcessCmdKey(ref msg, keyData);
         }
-
-
         protected override void OnHandleCreated(EventArgs e)
         {
             base.OnHandleCreated(e);
@@ -1797,7 +1564,6 @@ namespace Fenceless
 
             logger?.Debug($"Fence window '{_fenceInfo?.Name ?? "Unknown"}' configured to prevent minimize", "FenceWindow");
         }
-
         // Override CreateParams to hide from Alt+Tab and prevent minimize on Show Desktop
         protected override CreateParams CreateParams
         {
@@ -1813,7 +1579,6 @@ namespace Fenceless
                 return cp;
             }
         }
-
         protected override void OnShown(EventArgs e)
         {
             base.OnShown(e);

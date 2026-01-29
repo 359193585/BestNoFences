@@ -86,7 +86,7 @@ namespace Fenceless.Model
             Rectangle usableArea = new DesktopIconManager().GetUsableScreenArea();
             SizeAllFence(usableArea);
         }
-        public void SizeAllFenceHide()
+        public void SizeAllFenceMiniRightBottom()
         {
             // get usable screen area, 
             Rectangle usableArea = new Rectangle(
@@ -96,6 +96,22 @@ namespace Fenceless.Model
                 height: 5
                 );
             SizeAllFence(usableArea);
+        }
+        public void HideAllFences()
+        {
+            try
+            {
+                logger.Info("Hiding all fences", "FenceManager");
+                foreach (var fence in activeFences.ToList())
+                {
+                    fence.ForceHide();
+                }
+                logger.Info($"Hidden {activeFences.Count} fence(s)", "FenceManager");
+            }
+            catch (Exception ex)
+            {
+                logger.Error("Failed to hide all fences", "FenceManager", ex);
+            }
         }
         public void SizeAllFence(Rectangle usableArea)
         {
@@ -292,25 +308,29 @@ namespace Fenceless.Model
             }
         }
 
+        private readonly object saveLock = new object();
         public void UpdateFence(FenceInfo fenceInfo)
         {
-            try
+            lock (saveLock)
             {
-                var path = GetFolderPath(fenceInfo);
-                EnsureDirectoryExists(path);
-
-                var metaFile = Path.Combine(path, MetaFileName);
-                var serializer = new XmlSerializer(typeof(FenceInfo));
-                
-                using (var writer = new StreamWriter(metaFile))
+                try
                 {
-                    serializer.Serialize(writer, fenceInfo);
+                    var path = GetFolderPath(fenceInfo);
+                    EnsureDirectoryExists(path);
+
+                    var metaFile = Path.Combine(path, MetaFileName);
+                    var serializer = new XmlSerializer(typeof(FenceInfo));
+
+                    using (var writer = new StreamWriter(metaFile))
+                    {
+                        serializer.Serialize(writer, fenceInfo);
+                    }
+                    logger.Debug($"Updated fence '{fenceInfo.Name}' metadata", "FenceManager");
                 }
-                logger.Debug($"Updated fence '{fenceInfo.Name}' metadata", "FenceManager");
-            }
-            catch (Exception ex)
-            {
-                logger.Error($"Failed to update fence '{fenceInfo.Name}'", "FenceManager", ex);
+                catch (Exception ex)
+                {
+                    logger.Error($"Failed to update fence '{fenceInfo.Name}'", "FenceManager", ex);
+                }
             }
         }
 
@@ -413,22 +433,7 @@ namespace Fenceless.Model
             }
         }
 
-        private void HideAllFences()
-        {
-            try
-            {
-                logger.Info("Hiding all fences", "FenceManager");
-                foreach (var fence in activeFences.ToList())
-                {
-                    fence.ForceHide();
-                }
-                logger.Info($"Hidden {activeFences.Count} fence(s)", "FenceManager");
-            }
-            catch (Exception ex)
-            {
-                logger.Error("Failed to hide all fences", "FenceManager", ex);
-            }
-        }
+       
 
         public void ApplySettingsToAllFences(int transparency, bool autoHide, int autoHideDelay)
         {

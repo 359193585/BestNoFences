@@ -3,6 +3,7 @@ using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using System.Reflection.Metadata;
 
 namespace Fenceless.Util
 {
@@ -162,12 +163,19 @@ namespace Fenceless.Util
                     var color = mouseOver ? Color.FromArgb(120, SystemColors.GradientActiveCaption) : Color.FromArgb(100, SystemColors.GradientInactiveCaption);
                     using (var b = new SolidBrush(color)) g.FillRectangle(b, adaptiveRect);
                     using (var p = new Pen(Color.FromArgb(150, SystemColors.ActiveBorder))) g.DrawRectangle(p, outlineRectInner);
+
+                   
                 }
                 else if (mouseOver)
                 {
                     using (var b = new SolidBrush(Color.FromArgb(50, SystemColors.ActiveCaption))) g.FillRectangle(b, adaptiveRect);
                     using (var p = new Pen(Color.FromArgb(90, SystemColors.ActiveBorder)))
                         g.DrawRectangle(p, adaptiveRect.X, adaptiveRect.Y, adaptiveRect.Width - 1, adaptiveRect.Height - 1);
+                    using (Pen blueDashPen = new Pen(Color.DodgerBlue, 1))
+                    {
+                        blueDashPen.DashStyle = DashStyle.Dash;
+                        g.DrawRectangle(blueDashPen, adaptiveRect);
+                    }
                 }
             }
             float opacity = isBeingDragged ? 0.3f : 1.0f;
@@ -498,10 +506,6 @@ namespace Fenceless.Util
             path.CloseFigure();
             return path;
         }
-
-
-
-
 
         public void Dispose()
         {
