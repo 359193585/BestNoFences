@@ -27,7 +27,7 @@ namespace Fenceless.UI
             SetupHeader(title);
             SetupContent(message, icon);
             SetupButtons(buttons);
-            SetupDragging();
+            //SetupDragging();
         }
 
         private void InitializeComponent()

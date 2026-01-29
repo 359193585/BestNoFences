@@ -64,8 +64,9 @@ namespace Fenceless
                             {
                                 trayIcon.Icon = new Icon(ms);
                             }
+                            var currentVersion = UpdateNotication.GetCurrentVersion();
                             trayIcon.Visible = true;
-                            trayIcon.Text = "Fenceless - Desktop organization tool";
+                            trayIcon.Text = "Fenceless - Desktop organization tool v" + currentVersion;
 
                             var contextMenu = new ContextMenuStrip();
                             #region Init right-click pop-up menus for taskbar icon

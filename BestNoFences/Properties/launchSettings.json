@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "BestNoFences": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "COMPLUS_ForceENC": "1"
+      }
+    }
+  }
+}

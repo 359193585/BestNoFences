@@ -1,15 +1,12 @@
 ﻿using Fenceless.Model;
-using Fenceless.Properties;
 using Fenceless.UI;
 using Fenceless.Util;
 using Fenceless.Win32;
 using Peter;
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Drawing;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using static Fenceless.Win32.WindowUtil;
@@ -19,6 +16,7 @@ namespace Fenceless
 {
     public partial class FenceWindow : Form
     {
+        #region private value
         private int logicalTitleHeight;
         private int titleHeight;
         private const int titleOffset = 3;
@@ -66,6 +64,7 @@ namespace Fenceless
         // Thread-safe icon cache with automatic memory management
         private readonly IconCache iconCache = new IconCache(50);
         private FormsTimer dragRefreshTimer;
+        #endregion
 
         private readonly ThrottledExecution throttledMove = new ThrottledExecution(TimeSpan.FromSeconds(4));
         private readonly ThrottledExecution throttledResize = new ThrottledExecution(TimeSpan.FromSeconds(4));
@@ -73,34 +72,14 @@ namespace Fenceless
         private readonly ShellContextMenu shellContextMenu = new ShellContextMenu();
 
         private readonly ThumbnailProvider thumbnailProvider = new ThumbnailProvider();
-
-        // Override CreateParams to hide from Alt+Tab and prevent minimize on Show Desktop
-        protected override CreateParams CreateParams
-        {
-            get
-            {
-                CreateParams cp = base.CreateParams;
-                // Add WS_EX_TOOLWINDOW to hide from Alt+Tab
-                cp.ExStyle |= 0x00000080; // WS_EX_TOOLWINDOW
-                // Add WS_EX_NOACTIVATE to prevent being minimized on Show Desktop
-                cp.ExStyle |= 0x08000000; // WS_EX_NOACTIVATE
-                // Remove WS_EX_APPWINDOW to prevent Show Desktop from affecting this window
-                cp.ExStyle &= ~0x00040000; // Remove WS_EX_APPWINDOW
-                return cp;
-            }
-        }
-
-        private void ReloadFonts()
-        {
-            var family = new FontFamily("Segoe UI");
-            titleFont = new Font(family, (int)Math.Floor(logicalTitleHeight / 2.0));
-            iconFont = new Font(family, 9);
-        }
-
         public FenceWindow(FenceInfo fenceInfo)
         {
+            _fenceInfo = fenceInfo;
+
             logger = Logger.Instance;
             logger.Debug($"Creating fence window for '{fenceInfo.Name}'", "FenceWindow");
+
+            _fenceRenderer = new FenceRenderer(_fenceInfo, logger);// rendering process
 
             // Set form properties to hide from Alt+Tab before initialization
             this.ShowInTaskbar = false;
@@ -121,14 +100,13 @@ namespace Fenceless
 
             AllowDrop = true;
 
-            this._fenceInfo = fenceInfo;
             Text = fenceInfo.Name;
             Location = new Point(fenceInfo.PosX, fenceInfo.PosY);
 
             Width = fenceInfo.Width;
             Height = fenceInfo.Height;
-
-            prevHeight = Height;
+            prevHeight = fenceInfo.Height;
+            
             lockedToolStripMenuItem.Checked = fenceInfo.Locked;
             minifyToolStripMenuItem.Checked = fenceInfo.CanMinify;
 
@@ -139,7 +117,13 @@ namespace Fenceless
             Minify();
 
             logger.Info($"Fence window '{fenceInfo.Name}' created successfully at ({fenceInfo.PosX}, {fenceInfo.PosY})", "FenceWindow");
-           
+        }
+
+        private void ReloadFonts()
+        {
+            var family = new FontFamily("Segoe UI");
+            titleFont = new Font(family, (int)Math.Floor(logicalTitleHeight / 2.0));
+            iconFont = new Font(family, 9);
         }
 
         private void SetupEventHandlers()
@@ -243,129 +227,7 @@ namespace Fenceless
             }
         }
 
-        private void RenderEntry(Graphics g, FenceEntry entry, int x, int y, int itemWidth, int itemHeight, int iconSize, Color textColor)
-        {
-            try
-            {
-                var icon = entry.ExtractIcon(thumbnailProvider);
-                var name = entry.Name;
-
-                // Get or create cached scaled bitmap
-                var cacheKey = $"{entry.Path}_{iconSize}";
-                var iconBitmap = iconCache.GetIcon(entry.Path, iconSize);
-
-                if (iconBitmap == null) return; // Safety check
-
-                var textPosition = new PointF(x, y + iconBitmap.Height + 5);
-                var textMaxSize = new SizeF(itemWidth, textHeight);
-
-                var stringFormat = new StringFormat { Alignment = StringAlignment.Center, Trimming = StringTrimming.EllipsisCharacter };
-
-                var textSize = g.MeasureString(name, iconFont, textMaxSize, stringFormat);
-                var outlineRect = new Rectangle(x - 2, y - 2, itemWidth + 2, iconBitmap.Height + (int)textSize.Height + 5 + 2);
-                var outlineRectInner = outlineRect.Shrink(1);
-
-                var mousePos = PointToClient(MousePosition);
-                var mouseOver = !isDraggingItem && mousePos.X >= x && mousePos.Y >= y && mousePos.X < x + outlineRect.Width && mousePos.Y < y + outlineRect.Height;
-
-                // Check if this item is being dragged
-                var isBeingDragged = isDraggingItem && draggingItem == entry.Path;
-
-                if (mouseOver && !isBeingDragged)
-                {
-                    hoveringItem = entry.Path;
-                    hasHoverUpdated = true;
-                }
-
-                if (mouseOver && shouldUpdateSelection && !isBeingDragged)
-                {
-                    selectedItem = entry.Path;
-                    shouldUpdateSelection = false;
-                    hasSelectionUpdated = true;
-                }
-
-                if (mouseOver && shouldRunDoubleClick && !isDraggingItem)
-                {
-                    shouldRunDoubleClick = false;
-                    entry.Open();
-                }
-
-                // Apply transparency and visual effects for dragged items
-                float opacity = isBeingDragged ? 0.3f : 1.0f;
-
-                // Selection and hover highlighting
-                if (selectedItem == entry.Path && !isBeingDragged)
-                {
-                    if (mouseOver)
-                    {
-                        g.DrawRectangle(new Pen(Color.FromArgb(180, SystemColors.ActiveBorder), 2), outlineRectInner);
-                        g.FillRectangle(new SolidBrush(Color.FromArgb(120, SystemColors.GradientActiveCaption)), outlineRect);
-                    }
-                    else
-                    {
-                        g.DrawRectangle(new Pen(Color.FromArgb(150, SystemColors.ActiveBorder), 2), outlineRectInner);
-                        g.FillRectangle(new SolidBrush(Color.FromArgb(100, SystemColors.GradientInactiveCaption)), outlineRect);
-                    }
-                }
-                else if (!isBeingDragged)
-                {
-                    if (mouseOver)
-                    {
-                        g.DrawRectangle(new Pen(Color.FromArgb(120, SystemColors.ActiveBorder)), outlineRectInner);
-                        g.FillRectangle(new SolidBrush(Color.FromArgb(80, SystemColors.ActiveCaption)), outlineRect);
-                    }
-                }
-
-                // Draw icon centered with optional transparency
-                var iconRect = new Rectangle(x + itemWidth / 2 - iconBitmap.Width / 2, y, iconBitmap.Width, iconBitmap.Height);
-
-                if (isBeingDragged)
-                {
-                    // Use simple alpha blending for dragged items
-                    using (var imageAttributes = new System.Drawing.Imaging.ImageAttributes())
-                    {
-                        var colorMatrix = new System.Drawing.Imaging.ColorMatrix();
-                        colorMatrix.Matrix33 = opacity; // Alpha channel
-                        imageAttributes.SetColorMatrix(colorMatrix);
-                        g.DrawImage(iconBitmap, iconRect, 0, 0, iconBitmap.Width, iconBitmap.Height, GraphicsUnit.Pixel, imageAttributes);
-                    }
-                }
-                else
-                {
-                    g.DrawImage(iconBitmap, iconRect);
-                }
-
-                // Draw text with shadow if enabled
-                var textColorWithOpacity = isBeingDragged ?
-                    Color.FromArgb((int)(textColor.A * opacity), textColor.R, textColor.G, textColor.B) : textColor;
-
-                if (_fenceInfo.ShowShadow && !isBeingDragged) // Skip shadow for dragged items to improve performance
-                {
-                    using (var shadowBrush = new SolidBrush(Color.FromArgb(180, 15, 15, 15)))
-                    {
-                        g.DrawString(name, iconFont, shadowBrush,
-                            new RectangleF(textPosition.Move(shadowDist, shadowDist), textMaxSize), stringFormat);
-                    }
-                }
-
-                // Draw main text
-                using (var textBrush = new SolidBrush(textColorWithOpacity))
-                {
-                    g.DrawString(name, iconFont, textBrush, new RectangleF(textPosition, textMaxSize), stringFormat);
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.Error($"Error rendering entry '{entry?.Path}': {ex.Message}", "FenceWindow", ex);
-
-                // Draw error placeholder
-                using (var errorBrush = new SolidBrush(Color.Red))
-                {
-                    g.FillRectangle(errorBrush, x, y, itemWidth, itemHeight);
-                }
-            }
-        }
-
+      
         private void ClearOldCacheEntries()
         {
             try
@@ -526,21 +388,6 @@ namespace Fenceless
             autoHideTimer.Stop();
         }
 
-        protected override void OnHandleCreated(EventArgs e)
-        {
-            base.OnHandleCreated(e);
-
-            // Additional protection: Hide from Alt+Tab after handle is created
-            HideFromAltTab(Handle);
-
-            // Prevent minimize to survive Show Desktop
-            DesktopUtil.PreventMinimize(Handle);
-
-            // Start visibility monitor to keep window visible
-            InitializeVisibilityMonitor();
-
-            logger?.Debug($"Fence window '{_fenceInfo?.Name ?? "Unknown"}' configured to prevent minimize", "FenceWindow");
-        }
 
         private void InitializeVisibilityMonitor()
         {
@@ -589,13 +436,7 @@ namespace Fenceless
             }
         }
 
-        protected override void OnShown(EventArgs e)
-        {
-            base.OnShown(e);
-            DesktopUtil.GlueToDesktop(Handle);
-            SendToDesktopBack();
-            logger?.Debug($"Fence window '{_fenceInfo?.Name ?? "Unknown"}' attached to desktop", "FenceWindow");
-        }
+      
 
         private void SendToDesktopBack()
         {
@@ -603,17 +444,7 @@ namespace Fenceless
                 SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
         }
 
-        protected override void SetVisibleCore(bool value)
-        {
-            // Prevent Show Desktop from hiding the window
-            // Only allow hiding if we're auto-hiding or being disposed
-            if (!value && !isAutoHidden && !this.IsDisposed && this.IsHandleCreated)
-            {
-                // Ignore hide requests from Show Desktop
-                return;
-            }
-            base.SetVisibleCore(value);
-        }
+      
         private void HandleDisplayChangeGrid(int newScreenWidth, int newScreenHeight)
         {
             // Resize all fences
@@ -624,191 +455,7 @@ namespace Fenceless
 
 
 
-        protected override void WndProc(ref Message m)
-        {
-
-            // new screen resolution
-            if (m.Msg == WM_DISPLAYCHANGE)
-            {
-                int newWidth = (int)m.LParam & 0xFFFF;  // lParam low 16 bits is width
-                int newHeight = (int)m.LParam >> 16;    // lParam high 16 bits is height
-                int colorDepth = (int)m.WParam;         // wParam means color depth
-
-                // handle screen resolution change
-                HandleDisplayChangeGrid(newWidth, newHeight);
-                _fenceInfo.ScreenX = newWidth;
-                _fenceInfo.ScreenY = newHeight;
-            }
-
-            // Remove border
-            if (m.Msg == 0x0083)
-            {
-                m.Result = IntPtr.Zero;
-                return;
-            }
-
-            // Mouse leave
-            var myrect = new Rectangle(Location, Size);
-            if (m.Msg == 0x02a2 && !myrect.IntersectsWith(new Rectangle(MousePosition, new Size(1, 1))))
-            {
-                Minify();
-            }
-
-            // Prevent maximize/minimize
-            if (m.Msg == WM_SYSCOMMAND)
-            {
-                var command = m.WParam.ToInt32() & 0xFFF0;
-                if (command == SC_MAXIMIZE || command == SC_MINIMIZE)
-                {
-                    m.Result = IntPtr.Zero;
-                    return;
-                }
-            }
-
-            // Prevent window from being hidden (Show Desktop)
-            if (m.Msg == WM_SHOWWINDOW && m.WParam == IntPtr.Zero)
-            {
-                // Ignore hide commands unless we're auto-hiding or user is closing
-                if (!isAutoHidden && !this.IsDisposed)
-                {
-                    m.Result = IntPtr.Zero;
-                    return;
-                }
-            }
-
-            // Prevent window position changes that would hide the window (Show Desktop button)
-            if (m.Msg == WM_WINDOWPOSCHANGING)
-            {
-                var wp = Marshal.PtrToStructure<WINDOWPOS>(m.LParam);
-
-                // Check if the window is being moved off-screen or hidden
-                if ((wp.flags & HideWindowFlag) != 0)
-                {
-                    // Remove the hide flag unless we're auto-hiding
-                    if (!isAutoHidden && !IsDisposed)
-                    {
-                        wp.flags &= ~HideWindowFlag;
-                        Marshal.StructureToPtr(wp, m.LParam, false);
-                    }
-                }
-            }
-
-            if (m.Msg == WM_SIZE && m.WParam.ToInt32() == SIZE_MINIMIZED)
-            {
-                EnsureFenceVisible();
-                m.Result = IntPtr.Zero;
-                return;
-            }
-
-            if (m.Msg == WM_WINDOWPOSCHANGED)
-            {
-                var wp = Marshal.PtrToStructure<WINDOWPOS>(m.LParam);
-                if ((wp.flags & HideWindowFlag) != 0 && !isAutoHidden && !IsDisposed)
-                {
-                    EnsureFenceVisible();
-                    m.Result = IntPtr.Zero;
-                    return;
-                }
-            }
-
-            if (m.Msg == WM_COMMAND)
-            {
-                int commandId = m.WParam.ToInt32() & 0xFFFF;
-                if ((commandId == MIN_ALL || commandId == MIN_ALL_UNDO) && !isAutoHidden)
-                {
-                    EnsureFenceVisible();
-                    m.Result = IntPtr.Zero;
-                    return;
-                }
-            }
-
-            // Prevent foreground
-            if (m.Msg == WM_SETFOCUS)
-            {
-                SendToDesktopBack();
-                return;
-            }
-
-            // Other messages
-            base.WndProc(ref m);
-
-            // If not locked and using the left mouse button
-            if (MouseButtons == MouseButtons.Right || lockedToolStripMenuItem.Checked)
-                return;
-
-            // Then, allow dragging and resizing
-            if (m.Msg == WM_NCHITTEST)
-            {
-                var pt = PointToClient(new Point(m.LParam.ToInt32()));
-
-                // Don't allow form dragging if we're dragging an item
-                if (isDraggingItem)
-                {
-                    m.Result = (IntPtr)HTCLIENT;
-                    return;
-                }
-
-                if ((int)m.Result == HTCLIENT && pt.Y < titleHeight)     // drag the form
-                {
-                    m.Result = (IntPtr)HTCAPTION;
-                    FenceWindow_MouseEnter(null, null);
-                }
-
-                if (pt.X < 10 && pt.Y < 10)
-                    m.Result = new IntPtr(HTTOPLEFT);
-                else if (pt.X > (Width - 10) && pt.Y < 10)
-                    m.Result = new IntPtr(HTTOPRIGHT);
-                else if (pt.X < 10 && pt.Y > (Height - 10))
-                    m.Result = new IntPtr(HTBOTTOMLEFT);
-                else if (pt.X > (Width - 10) && pt.Y > (Height - 10))
-                    m.Result = new IntPtr(HTBOTTOMRIGHT);
-                else if (pt.Y > (Height - 10))
-                    m.Result = new IntPtr(HTBOTTOM);
-                else if (pt.X < 10)
-                    m.Result = new IntPtr(HTLEFT);
-                else if (pt.X > (Width - 10))
-                    m.Result = new IntPtr(HTRIGHT);
-            }
-        }
-
-        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
-        {
-            // Handle Escape key to cancel dragging
-            if (keyData == Keys.Escape && isDraggingItem)
-            {
-                CancelDrag();
-                return true;
-            }
-
-            // Handle keyboard shortcuts
-            if (keyData == (Keys.Control | Keys.Alt | Keys.T))
-            {
-                ToggleTransparency();
-                return true;
-            }
-            else if (keyData == (Keys.Control | Keys.Alt | Keys.S))
-            {
-                ShowAllFences();
-                return true;
-            }
-            else if (keyData == Keys.Delete && selectedItem != null && !lockedToolStripMenuItem.Checked)
-            {
-                RemoveSelectedItem();
-                return true;
-            }
-            else if (keyData == (Keys.Control | Keys.Up) && selectedItem != null && !lockedToolStripMenuItem.Checked)
-            {
-                MoveSelectedItemUp();
-                return true;
-            }
-            else if (keyData == (Keys.Control | Keys.Down) && selectedItem != null && !lockedToolStripMenuItem.Checked)
-            {
-                MoveSelectedItemDown();
-                return true;
-            }
-
-            return base.ProcessCmdKey(ref msg, keyData);
-        }
+     
 
         private void RemoveSelectedItem()
         {
@@ -960,31 +607,32 @@ namespace Fenceless
                 {
                     if (!_fenceInfo.Files.Contains(file) && ItemExists(file))
                     {
+                        if (Path.GetExtension(file).Equals(".lnk", StringComparison.OrdinalIgnoreCase))
+                        {
                         #region ask user if to delete source link file
-
-                        string _isDeletePromptString = "";
+                            string _isDeletePromptString = "";
                         if (AppSettings.Instance.isDeleteSourceLinkFile == -1 || AppSettings.Instance.isAskDeleteSourceLinkFile) //init value ,ask user
                         {
                             DialogResult dialogResult = CustomMessageBox.Show(
-                                "Do you want keep source link?",
+                                $"Do you want keep source link [{Path.GetFileNameWithoutExtension(file)}]?",
                                 "Fenceless | Message",
                                 MessageBoxButtons.YesNo,
                                 MessageBoxIcon.Question);
                             if (dialogResult == DialogResult.Yes)
                             {
                                 AppSettings.Instance.isDeleteSourceLinkFile = 0;
-                                _isDeletePromptString = "Keep source link file.";
+                                _isDeletePromptString = "Keep source link file";
                             }
                             else if (dialogResult == DialogResult.No)
                             {
                                 AppSettings.Instance.isDeleteSourceLinkFile = 1;
-                                _isDeletePromptString = "Delete source link file.";
+                                _isDeletePromptString = "Delete source link file";
                             }
                         }
                         if (AppSettings.Instance.isAskDeleteSourceLinkFile)
                         {
                             DialogResult dialogResult2 = CustomMessageBox.Show(
-                                $"Do you want always {_isDeletePromptString}? \r\n If you select no, it will ask you again.\r\n\r\n(setting not saved persistently and message will again after program restarts.)",
+                                $"Do you want always {_isDeletePromptString} ? \r\n If you select no, it will ask you again!\r\n\r\n(setting not saved persistently and message will again after program restarts.)",
                                 "Fenceless | Message",
                                 MessageBoxButtons.YesNo,
                                 MessageBoxIcon.Question);
@@ -996,12 +644,12 @@ namespace Fenceless
                         }
 
                         #endregion
+                        }
                         string newFile = file;
                         if (AppSettings.Instance.isDeleteSourceLinkFile == 1)
                         {
                             newFile = DeleteShortcutFile(file);
                             logger.Debug($"Deleted source link file for: {file}", "FenceWindow");
-
                         }
 
                         _fenceInfo.Files.Add(newFile);
@@ -1358,33 +1006,7 @@ namespace Fenceless
             Save();
         }
 
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                logger?.Debug("Disposing fence window", "FenceWindow");
-
-                // Dispose icon cache (handles all cached bitmaps)
-                iconCache?.Dispose();
-
-                // Dispose timers
-                autoHideTimer?.Dispose();
-                dragRefreshTimer?.Dispose();
-                visibilityMonitor?.Dispose();
-
-                // Dispose fonts
-                titleFont?.Dispose();
-                iconFont?.Dispose();
-
-                // Dispose other resources
-                thumbnailProvider?.Dispose();
-                throttledMove?.Dispose();
-                throttledResize?.Dispose();
-                // Note: ShellContextMenu doesn't implement IDisposable
-            }
-            base.Dispose(disposing);
-        }
-
+      
         private void FenceWindow_Click(object sender, EventArgs e)
         {
             // Only handle selection if we're not dragging
@@ -1431,257 +1053,71 @@ namespace Fenceless
             }
         }
 
+        // 声明渲染器实例
+        // Declare the renderer instance
+        private FenceRenderer _fenceRenderer;
         private void FenceWindow_Paint(object sender, PaintEventArgs e)
         {
             try
             {
-                e.Graphics.Clip = new Region(ClientRectangle);
-                e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
-                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-
-                // Use customizable colors with transparency
-                var backgroundColor = ApplyTransparency(Color.FromArgb(_fenceInfo.BackgroundColor), _fenceInfo.BackgroundTransparency);
-                var titleBackgroundColor = ApplyTransparency(Color.FromArgb(_fenceInfo.TitleBackgroundColor), _fenceInfo.TitleBackgroundTransparency);
-                var textColor = ApplyTransparency(Color.FromArgb(_fenceInfo.TextColor), _fenceInfo.TextTransparency);
-                var borderColor = ApplyTransparency(Color.FromArgb(_fenceInfo.BorderColor), _fenceInfo.BorderTransparency);
-
-                // Background with customizable color and transparency
-                using (var backgroundBrush = new SolidBrush(backgroundColor))
+                //   Collect all interaction states of the current window
+                var ctx = new FencePaintContext
                 {
-                    if (_fenceInfo.CornerRadius > 0)
-                    {
-                        // Draw rounded rectangle if corner radius is set
-                        using (var path = CreateRoundedRectanglePath(ClientRectangle, _fenceInfo.CornerRadius))
-                        {
-                            e.Graphics.FillPath(backgroundBrush, path);
-                        }
-                    }
-                    else
-                    {
-                        e.Graphics.FillRectangle(backgroundBrush, ClientRectangle);
-                    }
-                }
+                    Graphics = e.Graphics,
+                    ClientRectangle = ClientRectangle,
+                    WindowText = this.Text,
+                    MousePos = PointToClient(MousePosition),
+                    ScrollOffset = scrollOffset,
 
-                // Title background with customizable color and transparency
-                using (var titleBrush = new SolidBrush(titleBackgroundColor))
+                    TitleHeight = titleHeight,
+                    TitleOffset = titleOffset,
+                    ItemWidth = itemWidth,
+                    TextHeight = textHeight,
+                    NewScrollHeight = scrollHeight,
+
+                    IsDragging = isDraggingItem,
+                    DraggingItemPath = draggingItem,
+                    DragTargetIndex = dragTargetIndex,
+                    DragCurrentPoint = dragCurrentPoint,
+
+                    SelectedItem = selectedItem,
+                    HoveringItem = hoveringItem,
+                    ShouldUpdateSelection = shouldUpdateSelection,
+                    ShouldRunDoubleClick = shouldRunDoubleClick
+                };
+
+                // Execute the fully stripped-down renderer
+                _fenceRenderer.Render(ctx, new { IconCache = iconCache, ThumbnailProvider = thumbnailProvider });
+
+                this.scrollHeight = ctx.NewScrollHeight;
+                int visibleHeight = this.Height - titleHeight;
+                if (this.scrollHeight <= visibleHeight)
                 {
-                    var titleRect = new RectangleF(0, 0, Width, titleHeight);
-                    if (_fenceInfo.CornerRadius > 0)
-                    {
-                        // Only round the top corners for title
-                        using (var titlePath = CreateRoundedRectanglePath(titleRect, _fenceInfo.CornerRadius, true))
-                        {
-                            e.Graphics.FillPath(titleBrush, titlePath);
-                        }
-                    }
-                    else
-                    {
-                        e.Graphics.FillRectangle(titleBrush, titleRect);
-                    }
+                    this.scrollOffset = 0;
                 }
-
-                // Title text with customizable color and transparency
-                using (var textBrush = new SolidBrush(textColor))
+                else
                 {
-                    e.Graphics.DrawString(Text, titleFont, textBrush, new PointF(Width / 2, titleOffset),
-                        new StringFormat { Alignment = StringAlignment.Center });
+                    // Ensure scroll offset does not exceed the maximum range
+                    this.scrollOffset = Math.Max(0, Math.Min(this.scrollOffset, this.scrollHeight - visibleHeight));
                 }
+                // Sync calculation results back to form
+                if (ctx.ShouldUpdateSelection && !ctx.HasSelectionUpdated) this.selectedItem = null;
+                if (!ctx.HasHoverUpdated) this.hoveringItem = null;
 
-                // Border if enabled
-                if (_fenceInfo.BorderWidth > 0)
-                {
-                    using (var borderPen = new Pen(borderColor, _fenceInfo.BorderWidth))
-                    {
-                        if (_fenceInfo.CornerRadius > 0)
-                        {
-                            var borderRect = new Rectangle(_fenceInfo.BorderWidth / 2, _fenceInfo.BorderWidth / 2,
-                                Width - _fenceInfo.BorderWidth, Height - _fenceInfo.BorderWidth);
-                            using (var borderPath = CreateRoundedRectanglePath(borderRect, _fenceInfo.CornerRadius))
-                            {
-                                e.Graphics.DrawPath(borderPen, borderPath);
-                            }
-                        }
-                        else
-                        {
-                            e.Graphics.DrawRectangle(borderPen, 0, 0, Width - 1, Height - 1);
-                        }
-                    }
-                }
+                if (ctx.HasSelectionUpdated) this.selectedItem = ctx.NewSelectedItem;
+                if (ctx.HasHoverUpdated) this.hoveringItem = ctx.NewHoveringItem;
 
-                // Items
-                var itemSpacing = _fenceInfo.ItemSpacing;
-                var iconSize = _fenceInfo.IconSize;
-                var actualItemWidth = Math.Max(iconSize + 10, itemWidth);
-                var actualItemHeight = iconSize + textHeight + 10;
+                this.scrollHeight = ctx.NewScrollHeight;
+                this.scrollOffset = Math.Min(scrollOffset, Math.Max(0, ctx.NewScrollHeight - (Height - titleHeight)));
 
-                var x = itemSpacing;
-                var y = itemSpacing;
-                scrollHeight = 0;
-                e.Graphics.Clip = new Region(new Rectangle(0, titleHeight, Width, Height - titleHeight));
-
-                foreach (var file in _fenceInfo.Files)
-                {
-                    try
-                    {
-                        var entry = FenceEntry.FromPath(file);
-                        if (entry == null)
-                            continue;
-
-                        RenderEntry(e.Graphics, entry, x, y + titleHeight - scrollOffset, actualItemWidth, actualItemHeight, iconSize, textColor);
-
-                        var itemBottom = y + actualItemHeight;
-                        if (itemBottom > scrollHeight)
-                            scrollHeight = itemBottom;
-
-                        x += actualItemWidth + itemSpacing;
-                        if (x + actualItemWidth > Width)
-                        {
-                            x = itemSpacing;
-                            y += actualItemHeight + itemSpacing;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.Error($"Error rendering file '{file}': {ex.Message}", "FenceWindow", ex);
-                        // Continue with next item instead of crashing
-                    }
-                }
-
-                scrollHeight -= (ClientRectangle.Height - titleHeight);
-
-                // Scroll bars
-                if (scrollHeight > 0)
-                {
-                    var contentHeight = Height - titleHeight;
-                    var scrollbarHeight = contentHeight - scrollHeight;
-                    using (var scrollBrush = new SolidBrush(Color.FromArgb(150, borderColor)))
-                    {
-                        e.Graphics.FillRectangle(scrollBrush, new Rectangle(Width - 5, titleHeight + scrollOffset, 5, scrollbarHeight));
-                    }
-                    scrollOffset = Math.Min(scrollOffset, scrollHeight);
-                }
-
-                // Click handlers
-                if (shouldUpdateSelection && !hasSelectionUpdated)
-                    selectedItem = null;
-
-                if (!hasHoverUpdated)
-                    hoveringItem = null;
-
-                // Render drag target indicator
-                if (isDraggingItem && dragTargetIndex >= 0)
-                {
-                    RenderDragTargetIndicator(e.Graphics, dragTargetIndex);
-                }
-
-                // Render dragged item at cursor position
-                if (isDraggingItem && draggingItem != null)
-                {
-                    RenderDraggedItem(e.Graphics, draggingItem, dragCurrentPoint);
-                }
-
+                // Reset transient flags
                 shouldRunDoubleClick = false;
                 shouldUpdateSelection = false;
-                hasSelectionUpdated = false;
-                hasHoverUpdated = false;
-            }
-            catch (OutOfMemoryException ex)
-            {
-                logger.Critical("Out of memory in paint method, clearing caches", "FenceWindow", ex);
-
-                // Emergency cleanup
-                ClearIconCache();
-
-                // Draw simple error state
-                try
-                {
-                    using (var errorBrush = new SolidBrush(Color.DarkRed))
-                    {
-                        e.Graphics.FillRectangle(errorBrush, ClientRectangle);
-                    }
-                    using (var textBrush = new SolidBrush(Color.White))
-                    {
-                        e.Graphics.DrawString("Memory Error - Cache Cleared", SystemFonts.DefaultFont, textBrush, 10, 10);
-                    }
-                }
-                catch
-                {
-                    // If even error drawing fails, just continue
-                }
             }
             catch (Exception ex)
             {
-                logger.Error($"Error in paint method: {ex.Message}", "FenceWindow", ex);
-
-                // Draw simple error state
-                try
-                {
-                    using (var errorBrush = new SolidBrush(Color.Red))
-                    {
-                        e.Graphics.FillRectangle(errorBrush, ClientRectangle);
-                    }
-                    using (var textBrush = new SolidBrush(Color.White))
-                    {
-                        e.Graphics.DrawString($"Render Error: {ex.Message}", SystemFonts.DefaultFont, textBrush, 10, 10);
-                    }
-                }
-                catch
-                {
-                    // If even error drawing fails, just continue
-                }
+                Logger.Instance.Error("Paint execution failed", "FenceWindow", ex);
             }
-        }
-
-        private Color ApplyTransparency(Color baseColor, int transparencyPercent)
-        {
-            // Convert transparency percentage to alpha value (0-255)
-            int alpha = (int)Math.Round(transparencyPercent * 255.0 / 100.0);
-            alpha = Math.Max(0, Math.Min(255, alpha)); // Clamp to valid range
-
-            return Color.FromArgb(alpha, baseColor.R, baseColor.G, baseColor.B);
-        }
-
-        private System.Drawing.Drawing2D.GraphicsPath CreateRoundedRectanglePath(RectangleF rect, int radius, bool topOnly = false)
-        {
-            var path = new System.Drawing.Drawing2D.GraphicsPath();
-
-            if (radius <= 0)
-            {
-                path.AddRectangle(rect);
-                return path;
-            }
-
-            var diameter = radius * 2;
-            var arc = new RectangleF(0, 0, diameter, diameter);
-
-            // Top left corner
-            arc.Location = new PointF(rect.Left, rect.Top);
-            path.AddArc(arc, 180, 90);
-
-            // Top right corner
-            arc.Location = new PointF(rect.Right - diameter, rect.Top);
-            path.AddArc(arc, 270, 90);
-
-            if (topOnly)
-            {
-                // Straight lines for bottom
-                path.AddLine(rect.Right, rect.Top + radius, rect.Right, rect.Bottom);
-                path.AddLine(rect.Right, rect.Bottom, rect.Left, rect.Bottom);
-                path.AddLine(rect.Left, rect.Bottom, rect.Left, rect.Top + radius);
-            }
-            else
-            {
-                // Bottom right corner
-                arc.Location = new PointF(rect.Right - diameter, rect.Bottom - diameter);
-                path.AddArc(arc, 0, 90);
-
-                // Bottom left corner
-                arc.Location = new PointF(rect.Left, rect.Bottom - diameter);
-                path.AddArc(arc, 90, 90);
-            }
-
-            path.CloseFigure();
-            return path;
         }
 
         private void renameToolStripMenuItem_Click(object sender, EventArgs e)
@@ -2073,124 +1509,7 @@ namespace Fenceless
 
         #endregion
 
-        #region Drag Feedback Rendering
-
-        private void RenderDragTargetIndicator(Graphics g, int targetIndex)
-        {
-            try
-            {
-                var itemSpacing = _fenceInfo.ItemSpacing;
-                var iconSize = _fenceInfo.IconSize;
-                var actualItemWidth = Math.Max(iconSize + 10, itemWidth);
-                var actualItemHeight = iconSize + textHeight + 10;
-                var itemsPerRow = Math.Max(1, (Width - itemSpacing) / (actualItemWidth + itemSpacing));
-
-                var row = targetIndex / itemsPerRow;
-                var col = targetIndex % itemsPerRow;
-
-                var x = itemSpacing + col * (actualItemWidth + itemSpacing);
-                var y = itemSpacing + row * (actualItemHeight + itemSpacing) + titleHeight - scrollOffset;
-
-                // Simple pulsing effect without complex math
-                var pulsePhase = (Environment.TickCount / 300) % 4;
-                var alpha = pulsePhase < 2 ? 120 : 80;
-
-                using (var pen = new Pen(Color.FromArgb(alpha, SystemColors.Highlight), 2))
-                using (var brush = new SolidBrush(Color.FromArgb(alpha / 8, SystemColors.Highlight)))
-                {
-                    var indicatorRect = new Rectangle(x - 1, y - 1, actualItemWidth + 2, actualItemHeight + 2);
-
-                    // Fill with subtle background
-                    g.FillRectangle(brush, indicatorRect);
-
-                    // Draw simple border
-                    pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
-                    g.DrawRectangle(pen, indicatorRect);
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.Error($"Error rendering drag target indicator: {ex.Message}", "FenceWindow", ex);
-            }
-        }
-
-        private void RenderDraggedItem(Graphics g, string itemPath, Point cursorPosition)
-        {
-            try
-            {
-                var entry = FenceEntry.FromPath(itemPath);
-                if (entry == null) return;
-
-                var iconSize = _fenceInfo.IconSize;
-                var cacheKey = $"{entry.Path}_{iconSize}";
-
-                // Use cached icon if available
-                var iconBitmap = iconCache.GetIcon(entry.Path, iconSize);
-
-                // Fallback to creating temporary bitmap if cache failed (shouldn't happen often)
-                if (iconBitmap == null)
-                {
-                    var icon = entry.ExtractIcon(thumbnailProvider);
-                    if (icon.Width != iconSize || icon.Height != iconSize)
-                    {
-                        iconBitmap = new Bitmap(iconSize, iconSize);
-                        using (var graphics = Graphics.FromImage(iconBitmap))
-                        {
-                            graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                            graphics.DrawIcon(icon, new Rectangle(0, 0, iconSize, iconSize));
-                        }
-                        // Don't cache here to avoid issues during drag
-                    }
-                    else
-                    {
-                        iconBitmap = icon.ToBitmap();
-                    }
-                }
-
-                if (iconBitmap == null) return;
-
-                // Position the dragged item slightly offset from cursor
-                var drawX = cursorPosition.X - iconSize / 2;
-                var drawY = cursorPosition.Y - iconSize / 2;
-
-                // Simple shadow without complex effects
-                using (var shadowBrush = new SolidBrush(Color.FromArgb(60, 0, 0, 0)))
-                {
-                    g.FillEllipse(shadowBrush, drawX + 2, drawY + 2, iconSize, iconSize);
-                }
-
-                // Draw the dragged icon with transparency
-                using (var imageAttributes = new System.Drawing.Imaging.ImageAttributes())
-                {
-                    var colorMatrix = new System.Drawing.Imaging.ColorMatrix();
-                    colorMatrix.Matrix33 = 0.8f; // Slightly transparent
-                    imageAttributes.SetColorMatrix(colorMatrix);
-                    g.DrawImage(iconBitmap, new Rectangle(drawX, drawY, iconSize, iconSize),
-                        0, 0, iconBitmap.Width, iconBitmap.Height, GraphicsUnit.Pixel, imageAttributes);
-                }
-
-                // Draw simplified item name
-                var textColor = ApplyTransparency(Color.FromArgb(_fenceInfo.TextColor), _fenceInfo.TextTransparency);
-                using (var textBrush = new SolidBrush(Color.FromArgb(180, textColor.R, textColor.G, textColor.B)))
-                {
-                    var textRect = new RectangleF(drawX - 20, drawY + iconSize + 2, iconSize + 40, 20);
-                    var stringFormat = new StringFormat { Alignment = StringAlignment.Center, Trimming = StringTrimming.EllipsisCharacter };
-                    g.DrawString(entry.Name, iconFont, textBrush, textRect, stringFormat);
-                }
-
-                // The icon cache manages disposal, so no need to dispose here
-                if (iconBitmap == null)
-                {
-                    logger.Warning($"Failed to get icon for dragged item '{itemPath}'", "FenceWindow");
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.Error($"Error rendering dragged item '{itemPath}': {ex.Message}", "FenceWindow", ex);
-            }
-        }
-
-        #endregion
+       
 
         #region Shortcut Deletion
         private string DeleteShortcutFile(string filePath)
@@ -2273,6 +1592,277 @@ namespace Fenceless
         }
         #endregion
 
+        #region override methods
+        protected override void WndProc(ref Message m)
+        {
+
+            // new screen resolution
+            if (m.Msg == WM_DISPLAYCHANGE)
+            {
+                int newWidth = (int)m.LParam & 0xFFFF;  // lParam low 16 bits is width
+                int newHeight = (int)m.LParam >> 16;    // lParam high 16 bits is height
+                int colorDepth = (int)m.WParam;         // wParam means color depth
+
+                // handle screen resolution change
+                HandleDisplayChangeGrid(newWidth, newHeight);
+                _fenceInfo.ScreenX = newWidth;
+                _fenceInfo.ScreenY = newHeight;
+            }
+
+            // Remove border
+            //if (m.Msg == 0x0083)
+            //{
+            //    m.Result = IntPtr.Zero;
+            //    return;
+            //}
+
+            // Mouse leave
+            var myrect = new Rectangle(Location, Size);
+            if (m.Msg == 0x02a2 && !myrect.IntersectsWith(new Rectangle(MousePosition, new Size(1, 1))))
+            {
+                Minify();
+            }
+
+            // Prevent maximize/minimize
+            if (m.Msg == WM_SYSCOMMAND)
+            {
+                var command = m.WParam.ToInt32() & 0xFFF0;
+                if (command == SC_MAXIMIZE || command == SC_MINIMIZE)
+                {
+                    m.Result = IntPtr.Zero;
+                    return;
+                }
+            }
+
+            // Prevent window from being hidden (Show Desktop)
+            if (m.Msg == WM_SHOWWINDOW && m.WParam == IntPtr.Zero)
+            {
+                // Ignore hide commands unless we're auto-hiding or user is closing
+                if (!isAutoHidden && !this.IsDisposed)
+                {
+                    m.Result = IntPtr.Zero;
+                    return;
+                }
+            }
+
+            // Prevent window position changes that would hide the window (Show Desktop button)
+            if (m.Msg == WM_WINDOWPOSCHANGING)
+            {
+                var wp = Marshal.PtrToStructure<WINDOWPOS>(m.LParam);
+
+                // Check if the window is being moved off-screen or hidden
+                if ((wp.flags & HideWindowFlag) != 0)
+                {
+                    // Remove the hide flag unless we're auto-hiding
+                    if (!isAutoHidden && !IsDisposed)
+                    {
+                        wp.flags &= ~HideWindowFlag;
+                        Marshal.StructureToPtr(wp, m.LParam, false);
+                    }
+                }
+            }
+            // By setting m.Result = IntPtr.Zero and returning, prevent the system from performing the default minimization operation.
+            if (m.Msg == WM_SIZE && m.WParam.ToInt32() == SIZE_MINIMIZED)
+            {
+                EnsureFenceVisible();
+                m.Result = IntPtr.Zero;
+                return;
+            }
+
+            if (m.Msg == WM_WINDOWPOSCHANGED)
+            {
+                var wp = Marshal.PtrToStructure<WINDOWPOS>(m.LParam);
+                if ((wp.flags & HideWindowFlag) != 0 && !isAutoHidden && !IsDisposed)
+                {
+                    EnsureFenceVisible();
+                    m.Result = IntPtr.Zero;
+                    return;
+                }
+            }
+
+            if (m.Msg == WM_COMMAND)
+            {
+                int commandId = m.WParam.ToInt32() & 0xFFFF;
+                if ((commandId == MIN_ALL || commandId == MIN_ALL_UNDO) && !isAutoHidden)
+                {
+                    EnsureFenceVisible();
+                    m.Result = IntPtr.Zero;
+                    return;
+                }
+            }
+
+            // Prevent foreground
+            if (m.Msg == WM_SETFOCUS)
+            {
+                SendToDesktopBack();
+                return;
+            }
+
+            // Other messages
+            base.WndProc(ref m);
+
+            // If not locked and using the left mouse button
+            if (MouseButtons == MouseButtons.Right || lockedToolStripMenuItem.Checked)
+                return;
+
+            // Then, allow dragging and resizing
+            // If you comment out this section of code, it is easy to cause the form - flickering problem.
+            if (m.Msg == WM_NCHITTEST)
+            {
+                var pt = PointToClient(new Point(m.LParam.ToInt32()));
+
+                // Don't allow form dragging if we're dragging an item
+                if (isDraggingItem)
+                {
+                    m.Result = (IntPtr)HTCLIENT;
+                    return;
+                }
+
+                //if ((int)m.Result == HTCLIENT && pt.Y < titleHeight)     // drag the form
+                //{
+                //    m.Result = (IntPtr)HTCAPTION;
+                //    FenceWindow_MouseEnter(null, null);
+                //}
+
+                // The following message handling will affect whether the border of the form can be adjusted.
+                if (pt.X < 10 && pt.Y < 10)
+                    m.Result = new IntPtr(HTTOPLEFT);
+                else if (pt.X > (Width - 10) && pt.Y < 10)
+                    m.Result = new IntPtr(HTTOPRIGHT);
+                else if (pt.X < 10 && pt.Y > (Height - 10))
+                    m.Result = new IntPtr(HTBOTTOMLEFT);
+                else if (pt.X > (Width - 10) && pt.Y > (Height - 10))
+                    m.Result = new IntPtr(HTBOTTOMRIGHT);
+                else if (pt.Y > (Height - 10))
+                    m.Result = new IntPtr(HTBOTTOM);
+                else if (pt.X < 10)
+                    m.Result = new IntPtr(HTLEFT);
+                else if (pt.X > (Width - 10))
+                    m.Result = new IntPtr(HTRIGHT);
+            }
+        }
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            // Handle Escape key to cancel dragging
+            if (keyData == Keys.Escape && isDraggingItem)
+            {
+                CancelDrag();
+                return true;
+            }
+
+            // Handle keyboard shortcuts
+            if (keyData == (Keys.Control | Keys.Alt | Keys.T))
+            {
+                ToggleTransparency();
+                return true;
+            }
+            else if (keyData == (Keys.Control | Keys.Alt | Keys.S))
+            {
+                ShowAllFences();
+                return true;
+            }
+            else if (keyData == Keys.Delete && selectedItem != null && !lockedToolStripMenuItem.Checked)
+            {
+                RemoveSelectedItem();
+                return true;
+            }
+            else if (keyData == (Keys.Control | Keys.Up) && selectedItem != null && !lockedToolStripMenuItem.Checked)
+            {
+                MoveSelectedItemUp();
+                return true;
+            }
+            else if (keyData == (Keys.Control | Keys.Down) && selectedItem != null && !lockedToolStripMenuItem.Checked)
+            {
+                MoveSelectedItemDown();
+                return true;
+            }
+
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+
+            // Additional protection: Hide from Alt+Tab after handle is created
+            HideFromAltTab(Handle);
+
+            // Prevent minimize to survive Show Desktop
+            DesktopUtil.PreventMinimize(Handle);
+
+            // Start visibility monitor to keep window visible
+            InitializeVisibilityMonitor();
+
+            logger?.Debug($"Fence window '{_fenceInfo?.Name ?? "Unknown"}' configured to prevent minimize", "FenceWindow");
+        }
+
+        // Override CreateParams to hide from Alt+Tab and prevent minimize on Show Desktop
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                CreateParams cp = base.CreateParams;
+                // Add WS_EX_TOOLWINDOW to hide from Alt+Tab
+                cp.ExStyle |= 0x00000080; // WS_EX_TOOLWINDOW
+                // Add WS_EX_NOACTIVATE to prevent being minimized on Show Desktop
+                cp.ExStyle |= 0x08000000; // WS_EX_NOACTIVATE
+                // Remove WS_EX_APPWINDOW to prevent Show Desktop from affecting this window
+                cp.ExStyle &= ~0x00040000; // Remove WS_EX_APPWINDOW
+                return cp;
+            }
+        }
+
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+            DesktopUtil.GlueToDesktop(Handle);
+            SendToDesktopBack();
+            logger?.Debug($"Fence window '{_fenceInfo?.Name ?? "Unknown"}' attached to desktop", "FenceWindow");
+        }
+        protected override void SetVisibleCore(bool value)
+        {
+            // Prevent Show Desktop from hiding the window
+            // Only allow hiding if we're auto-hiding or being disposed
+            if (!value && !isAutoHidden && !this.IsDisposed && this.IsHandleCreated)
+            {
+                // Ignore hide requests from Show Desktop
+                return;
+            }
+            base.SetVisibleCore(value);
+        }
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                logger?.Debug("Disposing fence window", "FenceWindow");
+
+                // Dispose icon cache (handles all cached bitmaps)
+                iconCache?.Dispose();
+
+                // Dispose timers
+                autoHideTimer?.Dispose();
+                dragRefreshTimer?.Dispose();
+                visibilityMonitor?.Dispose();
+
+                // Dispose fonts
+                titleFont?.Dispose();
+                iconFont?.Dispose();
+
+                // Dispose other resources
+                thumbnailProvider?.Dispose();
+                throttledMove?.Dispose();
+                throttledResize?.Dispose();
+                // Note: ShellContextMenu doesn't implement IDisposable
+
+                // Notify the stripped-down renderer to clean up
+                _fenceRenderer?.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        #endregion
     }
 }
 

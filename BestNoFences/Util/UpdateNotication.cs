@@ -84,15 +84,8 @@ namespace Fenceless.Util
                     if (latestVersion.StartsWith("v"))
                         latestVersion = latestVersion.Substring(1);
 
-                    // Get current version from assembly
-                    var assembly = Assembly.GetExecutingAssembly();
-                    if (assembly?.GetName()?.Version == null)
-                    {
-                        logger?.Warning("Could not get current assembly version", "CheckForUpdates");
-                        return;
-                    }
-
-                    var currentVersion = assembly.GetName().Version.ToString();
+                    var currentVersion = GetCurrentVersion();
+                    if (currentVersion == "v0.0") return;
 
                     logger?.Info($"Current version: {currentVersion}, Latest version: {latestVersion}", "CheckForUpdates");
 
@@ -169,5 +162,17 @@ namespace Fenceless.Util
             }
         }
 
+        internal static string GetCurrentVersion()
+        {
+            // Get current version from assembly
+            var assembly = Assembly.GetExecutingAssembly();
+            if (assembly?.GetName()?.Version == null)
+            {
+                logger?.Warning("Could not get current assembly version", "CheckForUpdates");
+                return "v0.0";
+            }
+            var currentVersion = assembly.GetName().Version.ToString();
+            return currentVersion;
+        }
     }
 }

@@ -15,8 +15,8 @@
     <AssemblyDescription>Open Source Alternative to 'Stardock Fences'</AssemblyDescription>
     <AssemblyProduct>Fenceless</AssemblyProduct>
     <AssemblyCopyright>Copyright © Damianttje 2025</AssemblyCopyright>
-    <AssemblyVersion>1.0.1.2</AssemblyVersion>
-    <FileVersion>1.0.1.2</FileVersion>
+    <AssemblyVersion>1.1.01</AssemblyVersion>
+    <FileVersion>1.1.0.1</FileVersion>
     <Platforms>AnyCPU;x86</Platforms>
   </PropertyGroup>
 
