@@ -46,8 +46,8 @@ namespace Fenceless
         // Internal drag and drop fields
         private bool isDraggingItem = false;
         private string draggingItem = null;
-        private Point dragCurrentPoint;
-        private int dragTargetIndex = -1;
+        //private Point dragCurrentPoint;
+        //private int dragTargetIndex = -1;
 
         private bool _isDragReady = false;
         private bool _isFormDrag = false;
@@ -658,7 +658,9 @@ namespace Fenceless
                 if (_handler.ShouldStartItemDrag(e.Location))
                 {
                     this.Cursor = Cursors.Hand;
+                    isDraggingItem = true;
                     this.Text = $"{_fenceInfo.Name} - Dragging {Path.GetFileName(_handler.DraggingItemPath)}";
+                    _handler.StartItemDrag(selectedItem, e.Location);
                     StartDragTimer(); //  Start throttled refresh timer
                 }
             }
@@ -673,15 +675,19 @@ namespace Fenceless
             {
                 dragRefreshTimer = new FormsTimer { Interval = 16 };
                 dragRefreshTimer.Tick += (s, a) => {
-                    if (_handler.IsDraggingItem) Invalidate();
-                    else StopDragTimer(); 
+                    if (_handler.IsDraggingItem)
+                    {
+                        Invalidate();
+                    }
+                    else
+                    {
+                        dragRefreshTimer?.Stop();
+                        dragRefreshTimer.Dispose();
+                        dragRefreshTimer = null;
+                    }
                 };
                 dragRefreshTimer.Start();
             }
-        }
-        private void StopDragTimer()
-        {
-            dragRefreshTimer?.Stop();
         }
 
         private void FenceWindow_MouseDown(object sender, MouseEventArgs e)
@@ -695,7 +701,7 @@ namespace Fenceless
                 {
                     _isDragReady = true;
                     _isFormDrag = false;
-                    _handler.PrepareDrag(targetPath, e.Location); // 准备数据，但不开启 IsDraggingItem
+                    _handler.PrepareDrag(targetPath, e.Location); 
                     draggingItem = targetPath;
                     selectedItem = targetPath;
                     this.Cursor = Cursors.Hand;
@@ -706,7 +712,10 @@ namespace Fenceless
                     _formDragStartPoint = e.Location;
                 }
                 else if (action == ClickActionResult.ItemRemoved)
+                {
+                    ResetDragUI();
                     this.Refresh(); 
+                }
             }
           
         }
@@ -726,12 +735,12 @@ namespace Fenceless
         }
         private void ResetDragUI()
         {
-            isDraggingItem = false;
-            draggingItem = null;
-            dragTargetIndex = -1;
+            _handler.ResetDragState();
+            
             this.Cursor = Cursors.Default;
             this.Text = _fenceInfo.Name;
-            
+            this.selectedItem = null;
+
             // Stop drag refresh timer
             if (dragRefreshTimer != null)
             {
@@ -853,71 +862,7 @@ namespace Fenceless
                 if (needsRefresh)Refresh();
             }
         }
-       
-        private void FenceWindow_Paint(object sender, PaintEventArgs e)
-        {
-            try
-            {
-                //   Collect all interaction states of the current window
-                var ctx = new FencePaintContext
-                {
-                    Graphics = e.Graphics,
-                    ClientRectangle = ClientRectangle,
-                    WindowText = this.Text,
-                    MousePos = PointToClient(MousePosition),
-                    ScrollOffset = scrollOffset,
-
-                    TitleHeight = titleHeight,
-                    TitleOffset = titleOffset,
-                    ItemWidth = itemWidth,
-                    TextHeight = textHeight,
-                    NewScrollHeight = scrollHeight,
-
-                    IsDragging = isDraggingItem,
-                    DraggingItemPath = draggingItem,
-                    DragTargetIndex = dragTargetIndex,
-                    DragCurrentPoint = dragCurrentPoint,
-
-                    SelectedItem = selectedItem,
-                    HoveringItem = hoveringItem,
-                    ShouldUpdateSelection = shouldUpdateSelection,
-                    ShouldRunDoubleClick = shouldRunDoubleClick
-                };
-
-                // Execute the fully stripped-down renderer
-                _fenceRenderer.Render(ctx, new { IconCache = iconCache, ThumbnailProvider = thumbnailProvider });
-
-                this.scrollHeight = ctx.NewScrollHeight;
-                int visibleHeight = this.Height - titleHeight;
-                if (this.scrollHeight <= visibleHeight)
-                {
-                    this.scrollOffset = 0;
-                }
-                else
-                {
-                    // Ensure scroll offset does not exceed the maximum range
-                    this.scrollOffset = Math.Max(0, Math.Min(this.scrollOffset, this.scrollHeight - visibleHeight));
-                }
-                // Sync calculation results back to form
-                if (ctx.ShouldUpdateSelection && !ctx.HasSelectionUpdated) this.selectedItem = null;
-                if (!ctx.HasHoverUpdated) this.hoveringItem = null;
-
-                if (ctx.HasSelectionUpdated) this.selectedItem = ctx.NewSelectedItem;
-                if (ctx.HasHoverUpdated) this.hoveringItem = ctx.NewHoveringItem;
-
-                this.scrollHeight = ctx.NewScrollHeight;
-                this.scrollOffset = Math.Min(scrollOffset, Math.Max(0, ctx.NewScrollHeight - (Height - titleHeight)));
-
-                // Reset transient flags
-                shouldRunDoubleClick = false;
-                shouldUpdateSelection = false;
-            }
-            catch (Exception ex)
-            {
-                Logger.Instance.Error("Paint execution failed", "FenceWindow", ex);
-            }
-        }
-
+      
         private void renameToolStripMenuItem_Click(object sender, EventArgs e)
         {
             var dialog = new UI.EditDialog("Edit Name", Text, "New name:");
@@ -1490,6 +1435,78 @@ namespace Fenceless
                 return cp;
             }
         }
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            try
+            {
+                base.OnPaint(e);
+                if (_handler == null || _fenceRenderer == null || thumbnailProvider == null)
+                {
+                    return; 
+                }
+                var ctx = new FencePaintContext
+                {
+                    Graphics = e.Graphics,
+                    ClientRectangle = ClientRectangle,
+                    WindowText = this.Text,
+                    MousePos = PointToClient(MousePosition),
+                    ScrollOffset = scrollOffset,
+
+                    TitleHeight = titleHeight,
+                    ItemWidth = Math.Max(1, itemWidth),
+                    TextHeight = Math.Max(1, textHeight),
+
+                    IsDragging = _handler.IsDraggingItem,
+                    DraggingItemPath = _handler.DraggingItemPath,
+                    DragCurrentPoint = _handler.DragCurrentPoint,
+                    DragTargetIndex = _handler.DragTargetIndex,
+
+                    SelectedItem = selectedItem,
+                    HoveringItem = hoveringItem,
+                    ShouldUpdateSelection = shouldUpdateSelection,
+                    ShouldRunDoubleClick = shouldRunDoubleClick
+                };
+                var providersObject = new
+                {
+                    IconCache = iconCache, 
+                    ThumbnailProvider = thumbnailProvider 
+                };
+
+
+
+
+                _fenceRenderer.Render(ctx, providersObject);
+                this.scrollHeight = ctx.NewScrollHeight;
+                int visibleHeight = this.Height - titleHeight;
+                if (this.scrollHeight <= visibleHeight)
+                {
+                    this.scrollOffset = 0;
+                }
+                else
+                {
+                    // Ensure scroll offset does not exceed the maximum range
+                    this.scrollOffset = Math.Max(0, Math.Min(this.scrollOffset, this.scrollHeight - visibleHeight));
+                }
+                // Sync calculation results back to form
+                if (ctx.ShouldUpdateSelection && !ctx.HasSelectionUpdated) this.selectedItem = null;
+                if (!ctx.HasHoverUpdated) this.hoveringItem = null;
+
+                if (ctx.HasSelectionUpdated) this.selectedItem = ctx.NewSelectedItem;
+                if (ctx.HasHoverUpdated) this.hoveringItem = ctx.NewHoveringItem;
+
+                this.scrollHeight = ctx.NewScrollHeight;
+                this.scrollOffset = Math.Min(scrollOffset, Math.Max(0, ctx.NewScrollHeight - (Height - titleHeight)));
+
+                // Reset transient flags
+                this.shouldRunDoubleClick = false;
+                this.shouldUpdateSelection = false;
+            }
+            catch (Exception ex)
+            {
+                logger.Critical($"Critical Error in OnPaint: {ex.Message}", "FenceWindow", ex);
+                e.Graphics.DrawString("Rendering Error", this.Font, Brushes.Red, 10, 10);
+            }
+        }
         protected override void OnShown(EventArgs e)
         {
             base.OnShown(e);
@@ -1508,6 +1525,7 @@ namespace Fenceless
             }
             base.SetVisibleCore(value);
         }
+       
         protected override void Dispose(bool disposing)
         {
             if (disposing)

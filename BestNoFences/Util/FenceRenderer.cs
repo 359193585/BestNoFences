@@ -36,8 +36,10 @@ namespace Fenceless.Util
             DrawScrollbar(ctx);
             if (ctx.IsDragging)
             {
-                if (ctx.DragTargetIndex >= 0) RenderDragTargetIndicator(ctx);
-                if (ctx.DraggingItemPath != null) RenderDraggedItem(ctx, providers);
+                if (ctx.DragTargetIndex >= 0)
+                    RenderDragTargetIndicator(ctx);
+                if (ctx.DraggingItemPath != null)
+                    RenderDraggedItem(ctx, providers);
             }
         }
         private void DrawFrame(FencePaintContext ctx)
@@ -205,128 +207,6 @@ namespace Fenceless.Util
 
             using (var tb = new SolidBrush(Color.FromArgb((int)(255 * opacity), textColor)))
                 g.DrawString(name, iconFont, tb, textRect, format);
-        }
-        private void RenderEntry(Graphics g, FenceEntry entry, int x, int y, int itemWidth, int itemHeight, int iconSize, Color textColor)
-        {
-            //try
-            //{
-            //    var icon = entry.ExtractIcon(thumbnailProvider);
-            //    var name = entry.Name;
-
-            //    // Get or create cached scaled bitmap
-            //    var cacheKey = $"{entry.Path}_{iconSize}";
-            //    var iconBitmap = iconCache.GetIcon(entry.Path, iconSize);
-
-            //    if (iconBitmap == null) return; // Safety check
-
-            //    var textPosition = new PointF(x, y + iconBitmap.Height + 5);
-            //    var textMaxSize = new SizeF(itemWidth, textHeight);
-
-            //    var stringFormat = new StringFormat { Alignment = StringAlignment.Center, Trimming = StringTrimming.EllipsisCharacter };
-
-            //    var textSize = g.MeasureString(name, iconFont, textMaxSize, stringFormat);
-            //    var outlineRect = new Rectangle(x - 2, y - 2, itemWidth + 2, iconBitmap.Height + (int)textSize.Height + 5 + 2);
-            //    var outlineRectInner = outlineRect.Shrink(1);
-
-            //    var mousePos = PointToClient(MousePosition);
-            //    var mouseOver = !isDraggingItem && mousePos.X >= x && mousePos.Y >= y && mousePos.X < x + outlineRect.Width && mousePos.Y < y + outlineRect.Height;
-
-            //    // Check if this item is being dragged
-            //    var isBeingDragged = isDraggingItem && draggingItem == entry.Path;
-
-            //    if (mouseOver && !isBeingDragged)
-            //    {
-            //        hoveringItem = entry.Path;
-            //        hasHoverUpdated = true;
-            //    }
-
-            //    if (mouseOver && shouldUpdateSelection && !isBeingDragged)
-            //    {
-            //        selectedItem = entry.Path;
-            //        shouldUpdateSelection = false;
-            //        hasSelectionUpdated = true;
-            //    }
-
-            //    if (mouseOver && shouldRunDoubleClick && !isDraggingItem)
-            //    {
-            //        shouldRunDoubleClick = false;
-            //        entry.Open();
-            //    }
-
-            //    // Apply transparency and visual effects for dragged items
-            //    float opacity = isBeingDragged ? 0.3f : 1.0f;
-
-            //    // Selection and hover highlighting
-            //    if (selectedItem == entry.Path && !isBeingDragged)
-            //    {
-            //        if (mouseOver)
-            //        {
-            //            g.DrawRectangle(new Pen(Color.FromArgb(180, SystemColors.ActiveBorder), 2), outlineRectInner);
-            //            g.FillRectangle(new SolidBrush(Color.FromArgb(120, SystemColors.GradientActiveCaption)), outlineRect);
-            //        }
-            //        else
-            //        {
-            //            g.DrawRectangle(new Pen(Color.FromArgb(150, SystemColors.ActiveBorder), 2), outlineRectInner);
-            //            g.FillRectangle(new SolidBrush(Color.FromArgb(100, SystemColors.GradientInactiveCaption)), outlineRect);
-            //        }
-            //    }
-            //    else if (!isBeingDragged)
-            //    {
-            //        if (mouseOver)
-            //        {
-            //            g.DrawRectangle(new Pen(Color.FromArgb(120, SystemColors.ActiveBorder)), outlineRectInner);
-            //            g.FillRectangle(new SolidBrush(Color.FromArgb(80, SystemColors.ActiveCaption)), outlineRect);
-            //        }
-            //    }
-
-            //    // Draw icon centered with optional transparency
-            //    var iconRect = new Rectangle(x + itemWidth / 2 - iconBitmap.Width / 2, y, iconBitmap.Width, iconBitmap.Height);
-
-            //    if (isBeingDragged)
-            //    {
-            //        // Use simple alpha blending for dragged items
-            //        using (var imageAttributes = new System.Drawing.Imaging.ImageAttributes())
-            //        {
-            //            var colorMatrix = new System.Drawing.Imaging.ColorMatrix();
-            //            colorMatrix.Matrix33 = opacity; // Alpha channel
-            //            imageAttributes.SetColorMatrix(colorMatrix);
-            //            g.DrawImage(iconBitmap, iconRect, 0, 0, iconBitmap.Width, iconBitmap.Height, GraphicsUnit.Pixel, imageAttributes);
-            //        }
-            //    }
-            //    else
-            //    {
-            //        g.DrawImage(iconBitmap, iconRect);
-            //    }
-
-            //    // Draw text with shadow if enabled
-            //    var textColorWithOpacity = isBeingDragged ?
-            //        Color.FromArgb((int)(textColor.A * opacity), textColor.R, textColor.G, textColor.B) : textColor;
-
-            //    if (_fenceInfo.ShowShadow && !isBeingDragged) // Skip shadow for dragged items to improve performance
-            //    {
-            //        using (var shadowBrush = new SolidBrush(Color.FromArgb(180, 15, 15, 15)))
-            //        {
-            //            g.DrawString(name, iconFont, shadowBrush,
-            //                new RectangleF(textPosition.Move(shadowDist, shadowDist), textMaxSize), stringFormat);
-            //        }
-            //    }
-
-            //    // Draw main text
-            //    using (var textBrush = new SolidBrush(textColorWithOpacity))
-            //    {
-            //        g.DrawString(name, iconFont, textBrush, new RectangleF(textPosition, textMaxSize), stringFormat);
-            //    }
-            //}
-            //catch (Exception ex)
-            //{
-            //    logger.Error($"Error rendering entry '{entry?.Path}': {ex.Message}", "FenceWindow", ex);
-
-            //    // Draw error placeholder
-            //    using (var errorBrush = new SolidBrush(Color.Red))
-            //    {
-            //        g.FillRectangle(errorBrush, x, y, itemWidth, itemHeight);
-            //    }
-            //}
         }
 
         private void DrawScrollbar(FencePaintContext ctx)

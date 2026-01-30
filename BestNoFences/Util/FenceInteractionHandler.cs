@@ -14,17 +14,22 @@ namespace Fenceless.Util
         private const int DragThreshold = 5; // Minimum pixels to start dragging
 
         // Internal drag state fields 
-        public bool IsDraggingItem { get; private set; }
+        public bool IsDraggingItem { get; private set; } = false;
         public string DraggingItemPath { get; private set; }
         public Point DragStartPoint { get; private set; }
-        public Point DragCurrentPoint { get; private set; }
+        public Point DragCurrentPoint { get; private set; } = Point.Empty;
         public int DragTargetIndex { get; private set; } = -1;
-        public Rectangle DraggingTargetRect { get; private set; }
 
         public FenceInteractionHandler(FenceInfo info, Logger logger)
         {
             _fenceInfo = info;
             _logger = logger;
+        }
+        public void StartItemDrag(string path, Point currentMousePos)
+        {
+            IsDraggingItem = true;
+            DraggingItemPath = path;
+            DragCurrentPoint = currentMousePos;
         }
         // Handle business logic determination on MouseDown (integrates lock state and file validity check)
         public ClickActionResult HandleMouseDown(Point pos, bool isLocked, int scrollOffset, int titleHeight, int itemWidth, int textHeight, int windowWidth, out string targetPath)
@@ -83,7 +88,11 @@ namespace Fenceless.Util
             int spacing = _fenceInfo.ItemSpacing;
             int actualW = Math.Max(_fenceInfo.IconSize + 10, itemWidth);
             int actualH = _fenceInfo.IconSize + textHeight + 10;
-            int itemsPerRow = Math.Max(1, (windowWidth - spacing) / (actualW + spacing));
+
+            var divisor = actualW + spacing;
+            if (divisor <= 0) divisor = 1; 
+
+            var itemsPerRow = Math.Max(1, (_fenceInfo.Width - spacing) / divisor);
 
             // Convert coordinates to content area
             int relX = pos.X - spacing;
@@ -174,18 +183,16 @@ namespace Fenceless.Util
         {
             if (!IsDraggingItem) return;
             DragCurrentPoint = currentPos;
-            if (IsDraggingItem)
-            {
-                DragTargetIndex = GetGridPositionIndex(currentPos, scrollOffset, titleHeight, itemWidth, textHeight, windowWidth);
-            }
-
+            DragTargetIndex = GetGridPositionIndex(currentPos, scrollOffset, titleHeight, itemWidth, textHeight, windowWidth);
         }
         public void ResetDragState()
         {
             IsDraggingItem = false;
             DraggingItemPath = null;
             DragTargetIndex = -1;
+            DragCurrentPoint = Point.Empty;
         }
+       
         // Determine if displacement requirements for starting a drag are met
         public bool ShouldStartItemDrag(Point currentLocation)
         {
