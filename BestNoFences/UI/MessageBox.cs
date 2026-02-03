@@ -48,6 +48,7 @@ namespace Fenceless.UI
             ShowInTaskbar = false;
             StartPosition = FormStartPosition.CenterScreen;
             TopMost = true;
+            Owner = null;
             ResumeLayout(false);
         }
 

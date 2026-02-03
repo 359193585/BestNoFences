@@ -4,7 +4,6 @@ using Fenceless.Util;
 using Fenceless.Win32;
 using Peter;
 using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -66,11 +65,18 @@ namespace Fenceless
         private readonly FenceInfo _fenceInfo;
         private readonly Logger logger;
         private FenceRenderer _fenceRenderer;  // Declare the renderer instance
-        private FenceInteractionHandler _handler; 
+        private FenceInteractionHandler _handler;
+        private FenceWindowBehavior _behaviorManager;
+
+        private bool IsDebugDnD = false;
 
         public FenceWindow(FenceInfo fenceInfo)
         {
             _fenceInfo = fenceInfo;
+            _behaviorManager = new FenceWindowBehavior(this, _fenceInfo);
+#if DEBUG
+           // IsDebugDnD = true;
+#endif
 
             logger = Logger.Instance;
             logger.Debug($"Creating fence window for '{fenceInfo.Name}'", "FenceWindow");
@@ -84,8 +90,7 @@ namespace Fenceless
 
             InitializeComponent();
             SetupEventHandlers();
-            DropShadow.ApplyShadows(this);
-            BlurUtil.EnableBlur(Handle);
+
 
             logicalTitleHeight = (fenceInfo.TitleHeight < 16 || fenceInfo.TitleHeight > 100) ? 35 : fenceInfo.TitleHeight;
             titleHeight = LogicalToDeviceUnits(logicalTitleHeight);
@@ -103,16 +108,15 @@ namespace Fenceless
             Width = fenceInfo.Width;
             Height = fenceInfo.Height;
             prevHeight = fenceInfo.Height;
-            
+
             lockedToolStripMenuItem.Checked = fenceInfo.Locked;
             minifyToolStripMenuItem.Checked = fenceInfo.CanMinify;
 
-            // Initialize transparency and autohide
+            DropShadow.ApplyShadows(this);
+            BlurUtil.EnableBlur(Handle);
             SetTransparency(fenceInfo.Transparency);
             InitializeAutoHide();
-
             Minify();
-
             logger.Info($"Fence window '{fenceInfo.Name}' created successfully at ({fenceInfo.PosX}, {fenceInfo.PosY})", "FenceWindow");
         }
 
@@ -205,24 +209,7 @@ namespace Fenceless
             };
         }
 
-        // Add validation for file operations
-        private bool ItemExists(string path)
-        {
-            try
-            {
-                var exists = File.Exists(path) || Directory.Exists(path);
-                if (!exists)
-                {
-                    logger.Warning($"Item does not exist: {path}", "FenceWindow");
-                }
-                return exists;
-            }
-            catch (Exception ex)
-            {
-                logger.Error($"Error checking if item exists: {path}", "FenceWindow", ex);
-                return false;
-            }
-        }
+       
 
         private void settingsToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -551,83 +538,13 @@ namespace Fenceless
 
         private void FenceWindow_DragDrop(object sender, DragEventArgs e)
         {
-            try
-            {
-                var dropped = (string[])e.Data.GetData(DataFormats.FileDrop);
-                var addedFiles = 0;
+            var dropped = (string[])e.Data.GetData(DataFormats.FileDrop);
+            this.BeginInvoke(new Action(() =>{
+                _handler.HandleExternalDrop(dropped);
+                Refresh();
 
-                logger.Debug($"Processing {dropped.Length} dropped files", "FenceWindow");
-
-                foreach (var file in dropped)
-                {
-                    if (!_fenceInfo.Files.Contains(file) && ItemExists(file))
-                    {
-                        if (Path.GetExtension(file).Equals(".lnk", StringComparison.OrdinalIgnoreCase))
-                        {
-                        #region ask user if to delete source link file
-                            string _isDeletePromptString = "";
-                        if (AppSettings.Instance.isDeleteSourceLinkFile == -1 || AppSettings.Instance.isAskDeleteSourceLinkFile) //init value ,ask user
-                        {
-                            DialogResult dialogResult = CustomMessageBox.Show(
-                                $"Do you want keep source link [{Path.GetFileNameWithoutExtension(file)}]?",
-                                "Fenceless | Message",
-                                MessageBoxButtons.YesNo,
-                                MessageBoxIcon.Question);
-                            if (dialogResult == DialogResult.Yes)
-                            {
-                                AppSettings.Instance.isDeleteSourceLinkFile = 0;
-                                _isDeletePromptString = "Keep source link file";
-                            }
-                            else if (dialogResult == DialogResult.No)
-                            {
-                                AppSettings.Instance.isDeleteSourceLinkFile = 1;
-                                _isDeletePromptString = "Delete source link file";
-                            }
-                        }
-                        if (AppSettings.Instance.isAskDeleteSourceLinkFile)
-                        {
-                            DialogResult dialogResult2 = CustomMessageBox.Show(
-                                $"Do you want always {_isDeletePromptString} ? \r\n If you select no, it will ask you again!\r\n\r\n(setting not saved persistently and message will again after program restarts.)",
-                                "Fenceless | Message",
-                                MessageBoxButtons.YesNo,
-                                MessageBoxIcon.Question);
-                            if (dialogResult2 == DialogResult.Yes)
-                            {
-                                AppSettings.Instance.isAskDeleteSourceLinkFile = false;
-                            }
-                            
-                        }
-
-                        #endregion
-                        }
-                        string newFile = file;
-                        if (AppSettings.Instance.isDeleteSourceLinkFile == 1)
-                        {
-                            newFile = DeleteSourceShortcutFile(file);
-                            logger.Debug($"Deleted source link file for: {file}", "FenceWindow");
-                        }
-
-                        _fenceInfo.Files.Add(newFile);
-                        addedFiles++;
-                        logger.Debug($"Added file to fence: {newFile}", "FenceWindow");
-                    }
-                    else
-                    {
-                        logger.Debug($"Skipped file (already exists or invalid): {file}", "FenceWindow");
-                    }
-                }
-
-                if (addedFiles > 0)
-                {
-                    logger.Info($"Added {addedFiles} files to fence '{_fenceInfo.Name}'", "FenceWindow");
-                    Save();
-                    Refresh();
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.Error($"Failed to process dropped files for fence '{_fenceInfo.Name}'", "FenceWindow", ex);
-            }
+            }));
+           
         }
 
         private void FenceWindow_Resize(object sender, EventArgs e)
@@ -994,46 +911,6 @@ namespace Fenceless
             }
         }
 
-        private int ValidateAndCleanupItems()
-        {
-            try
-            {
-                var itemsToRemove = new List<string>();
-
-                foreach (var file in _fenceInfo.Files)
-                {
-                    if (!ItemExists(file))
-                    {
-                        itemsToRemove.Add(file);
-                    }
-                }
-
-                if (itemsToRemove.Count > 0)
-                {
-                    foreach (var item in itemsToRemove)
-                    {
-                        _fenceInfo.Files.Remove(item);
-                        logger.Info($"Removed invalid item from fence '{_fenceInfo.Name}': {item}", "FenceWindow");
-                    }
-
-                    // Clear selection if it was removed
-                    if (selectedItem != null && itemsToRemove.Contains(selectedItem))
-                    {
-                        selectedItem = null;
-                    }
-
-                    return itemsToRemove.Count;
-                }
-
-                return 0;
-            }
-            catch (Exception ex)
-            {
-                logger.Error($"Error validating items in fence '{_fenceInfo.Name}'", "FenceWindow", ex);
-                return 0;
-            }
-        }
-
         private void Save() => FenceManager.Instance.UpdateFence(_fenceInfo);
         private void FenceWindow_LocationChanged(object sender, EventArgs e)
         {
@@ -1054,10 +931,10 @@ namespace Fenceless
         private void FenceWindow_Load(object sender, EventArgs e)
         {
             // Validate items when the fence loads
-            var removedCount = ValidateAndCleanupItems();
-            if (removedCount > 0)
+            var itemsToRemove = _handler.ValidateAndCleanupItems();
+            if (itemsToRemove !=null )
             {
-                logger.Info($"Cleaned up {removedCount} invalid items from fence '{_fenceInfo.Name}' on load", "FenceWindow");
+                selectedItem = null;
                 Save();
                 Refresh();
             }
@@ -1134,237 +1011,21 @@ namespace Fenceless
             Invalidate();
         }
 
-        #region Shortcut Deletion
-        private string DeleteSourceShortcutFile(string filePath)
-        {
-            string newfilepath = filePath; // make a clone
-            try
-            {
-                if (Path.GetExtension(filePath).Equals(".lnk", StringComparison.OrdinalIgnoreCase))  //only delete .lnk files
-                {
-                    if (File.Exists(filePath))
-                    {
-                        string shortCutLinkBakPath = AppSettings.Instance.appDataPath + "\\shortcutbak";
-                        if (!Directory.Exists(shortCutLinkBakPath))
-                        {
-                            Directory.CreateDirectory(shortCutLinkBakPath);
-                        }
-                        newfilepath = Path.Combine(shortCutLinkBakPath, Path.GetFileName(filePath));
-                        File.Copy(filePath, newfilepath,true);
-                        if (File.Exists(newfilepath))
-                        {
-                            logger.Debug($"Backed up shortcut to: {newfilepath}", "DeleteShortcutFile");
-                            FileAttributes attributes = File.GetAttributes(filePath);
-                            if ((attributes & FileAttributes.ReadOnly) == FileAttributes.ReadOnly)
-                                File.SetAttributes(filePath, attributes & ~FileAttributes.ReadOnly);
-                            File.Delete(filePath);
-                            logger.Debug($"Deleted shortcut: {filePath}", "DeleteShortcutFile");
-                            if (IsDesktopFile(filePath)) NotifyDesktopChanged();
-                        }
-                        else
-                        {
-                            logger.Warning($"Failed to back up shortcut to: {newfilepath}", "DeleteShortcutFile");
-                        }
-                       
-                    }
-                }
-                else
-                {
-                    logger.Debug($"Not a shortcut file: {filePath}", "DeleteShortcutFile");
-                }
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                logger.Error($"Access denied when deleting shortcut: {filePath}", "DeleteShortcutFile");
-            }
-            catch (IOException ex)
-            {
-                logger.Error($"IO error when deleting shortcut: {filePath}", "DeleteShortcutFile");
-            }
-            catch (Exception ex)
-            {
-                logger.Error($"Error deleting shortcut: {filePath}", "DeleteShortcutFile");
-            }
-            return newfilepath;
-        }
-
-        private bool IsDesktopFile(string filePath)
-        {
-            try
-            {
-                string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                string fileDirectory = Path.GetDirectoryName(filePath);
-                return string.Equals(fileDirectory, desktopPath, StringComparison.OrdinalIgnoreCase);
-            }
-            catch
-            {
-                return false;
-            }
-        }
-        private void NotifyDesktopChanged()
-        {
-            try
-            {
-                // send WM_SETTINGCHANGE notify FLUSH desktop 
-                SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_FLUSH, IntPtr.Zero, IntPtr.Zero);
-            }
-            catch (Exception ex)
-            {
-                logger.Error($"Error notifying desktop change: {ex.Message}", "FenceWindow");
-            }
-        }
-        #endregion
+      
 
         #region override methods
         protected override void WndProc(ref Message m)
         {
-
-            // new screen resolution
-            if (m.Msg == WM_DISPLAYCHANGE)
+            var ctx = new FenceWindowBehaviorContent
             {
-                int newWidth = (int)m.LParam & 0xFFFF;  // lParam low 16 bits is width
-                int newHeight = (int)m.LParam >> 16;    // lParam high 16 bits is height
-                int colorDepth = (int)m.WParam;         // wParam means color depth
-                _fenceInfo.ScreenX = newWidth;
-                _fenceInfo.ScreenY = newHeight;
-
-                //// handle screen resolution change
-                //HandleDisplayChangeGrid(newWidth, newHeight);
-                FenceManager.Instance.SizeAllFence();
-                EnsureFenceVisible();
-            }
-
-            // Remove border
-            //if (m.Msg == 0x0083)
-            //{
-            //    m.Result = IntPtr.Zero;
-            //    return;
-            //}
-
-            // Mouse leave
-            var myrect = new Rectangle(Location, Size);
-            if (m.Msg == 0x02a2 && !myrect.IntersectsWith(new Rectangle(MousePosition, new Size(1, 1))))
-            {
-                Minify();
-            }
-
-            // Prevent maximize/minimize
-            if (m.Msg == WM_SYSCOMMAND)
-            {
-                var command = m.WParam.ToInt32() & 0xFFF0;
-                if (command == SC_MAXIMIZE || command == SC_MINIMIZE)
-                {
-                    m.Result = IntPtr.Zero;
-                    return;
-                }
-            }
-
-            // Prevent window from being hidden (Show Desktop)
-            if (m.Msg == WM_SHOWWINDOW && m.WParam == IntPtr.Zero)
-            {
-                // Ignore hide commands unless we're auto-hiding or user is closing
-                if (!isAutoHidden && !this.IsDisposed)
-                {
-                    m.Result = IntPtr.Zero;
-                    return;
-                }
-            }
-
-            // Prevent window position changes that would hide the window (Show Desktop button)
-            if (m.Msg == WM_WINDOWPOSCHANGING)
-            {
-                var wp = Marshal.PtrToStructure<WINDOWPOS>(m.LParam);
-
-                // Check if the window is being moved off-screen or hidden
-                if ((wp.flags & HideWindowFlag) != 0)
-                {
-                    // Remove the hide flag unless we're auto-hiding
-                    if (!isAutoHidden && !IsDisposed)
-                    {
-                        wp.flags &= ~HideWindowFlag;
-                        Marshal.StructureToPtr(wp, m.LParam, false);
-                    }
-                }
-            }
-            // By setting m.Result = IntPtr.Zero and returning, prevent the system from performing the default minimization operation.
-            if (m.Msg == WM_SIZE && m.WParam.ToInt32() == SIZE_MINIMIZED)
-            {
-                EnsureFenceVisible();
-                m.Result = IntPtr.Zero;
-                return;
-            }
-
-            if (m.Msg == WM_WINDOWPOSCHANGED)
-            {
-                var wp = Marshal.PtrToStructure<WINDOWPOS>(m.LParam);
-                if ((wp.flags & HideWindowFlag) != 0 && !isAutoHidden && !IsDisposed)
-                {
-                    EnsureFenceVisible();
-                    m.Result = IntPtr.Zero;
-                    return;
-                }
-            }
-
-            if (m.Msg == WM_COMMAND)
-            {
-                int commandId = m.WParam.ToInt32() & 0xFFFF;
-                if ((commandId == MIN_ALL || commandId == MIN_ALL_UNDO) && !isAutoHidden)
-                {
-                    EnsureFenceVisible();
-                    m.Result = IntPtr.Zero;
-                    return;
-                }
-            }
-
-            // Prevent foreground
-            if (m.Msg == WM_SETFOCUS)
-            {
-                SendToDesktopBack();
-                return;
-            }
-
-            // Other messages
+                IsDraggingItem = isDraggingItem,
+                DraggingItem = draggingItem,
+                IsAutoHidden = isAutoHidden,
+                IsDisposed = IsDisposed,
+                MousePos = PointToClient(MousePosition)
+            };
+            _behaviorManager.ProcessMessage(ref m, ctx);
             base.WndProc(ref m);
-
-            // If not locked and using the left mouse button
-            if (MouseButtons == MouseButtons.Right || lockedToolStripMenuItem.Checked)
-                return;
-
-            // Then, allow dragging and resizing
-            // If you comment out this section of code, it is easy to cause the form - flickering problem.
-            if (m.Msg == WM_NCHITTEST)
-            {
-                var pt = PointToClient(new Point(m.LParam.ToInt32()));
-
-                // Don't allow form dragging if we're dragging an item
-                if (isDraggingItem)
-                {
-                    m.Result = (IntPtr)HTCLIENT;
-                    return;
-                }
-
-                //if ((int)m.Result == HTCLIENT && pt.Y < titleHeight)     // drag the form
-                //{
-                //    m.Result = (IntPtr)HTCAPTION;
-                //    FenceWindow_MouseEnter(null, null);
-                //}
-
-                // The following message handling will affect whether the border of the form can be adjusted.
-                if (pt.X < 10 && pt.Y < 10)
-                    m.Result = new IntPtr(HTTOPLEFT);
-                else if (pt.X > (Width - 10) && pt.Y < 10)
-                    m.Result = new IntPtr(HTTOPRIGHT);
-                else if (pt.X < 10 && pt.Y > (Height - 10))
-                    m.Result = new IntPtr(HTBOTTOMLEFT);
-                else if (pt.X > (Width - 10) && pt.Y > (Height - 10))
-                    m.Result = new IntPtr(HTBOTTOMRIGHT);
-                else if (pt.Y > (Height - 10))
-                    m.Result = new IntPtr(HTBOTTOM);
-                else if (pt.X < 10)
-                    m.Result = new IntPtr(HTLEFT);
-                else if (pt.X > (Width - 10))
-                    m.Result = new IntPtr(HTRIGHT);
-            }
         }
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
@@ -1426,12 +1087,16 @@ namespace Fenceless
             get
             {
                 CreateParams cp = base.CreateParams;
-                // Add WS_EX_TOOLWINDOW to hide from Alt+Tab
-                cp.ExStyle |= 0x00000080; // WS_EX_TOOLWINDOW
-                // Add WS_EX_NOACTIVATE to prevent being minimized on Show Desktop
-                cp.ExStyle |= 0x08000000; // WS_EX_NOACTIVATE
-                // Remove WS_EX_APPWINDOW to prevent Show Desktop from affecting this window
-                cp.ExStyle &= ~0x00040000; // Remove WS_EX_APPWINDOW
+                if (!IsDebugDnD)
+                {
+
+                    // Add WS_EX_TOOLWINDOW to hide from Alt+Tab
+                    cp.ExStyle |= 0x00000080; // WS_EX_TOOLWINDOW
+                                              // Add WS_EX_NOACTIVATE to prevent being minimized on Show Desktop
+                    cp.ExStyle |= 0x08000000; // WS_EX_NOACTIVATE
+                                              // Remove WS_EX_APPWINDOW to prevent Show Desktop from affecting this window
+                    cp.ExStyle &= ~0x00040000; // Remove WS_EX_APPWINDOW
+                }
                 return cp;
             }
         }

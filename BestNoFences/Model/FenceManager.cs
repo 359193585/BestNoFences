@@ -433,8 +433,6 @@ namespace Fenceless.Model
             }
         }
 
-       
-
         public void ApplySettingsToAllFences(int transparency, bool autoHide, int autoHideDelay)
         {
             try

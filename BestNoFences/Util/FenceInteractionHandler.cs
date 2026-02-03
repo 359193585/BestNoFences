@@ -1,7 +1,12 @@
 ﻿using Fenceless.Model;
+using Fenceless.UI;
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Windows.Forms;
+using static Fenceless.Win32.WindowUtil;
+
 
 namespace Fenceless.Util
 {
@@ -25,6 +30,7 @@ namespace Fenceless.Util
             _fenceInfo = info;
             _logger = logger;
         }
+        #region drag item inter form
         public void StartItemDrag(string path, Point currentMousePos)
         {
             IsDraggingItem = true;
@@ -108,6 +114,7 @@ namespace Fenceless.Util
         // Execute position swap logic
         public bool CompleteDragReorder(string draggingItem, Point dropLocation, int scrollOffset, int titleHeight, int itemWidth, int textHeight, int windowWidth)
         {
+            ResetDragState();
             if (string.IsNullOrEmpty(draggingItem)) return false;
 
             int sourceIdx = _fenceInfo.Files.IndexOf(draggingItem);
@@ -129,36 +136,8 @@ namespace Fenceless.Util
             }
             return false;
         }
-        // Handle core business logic for double-click events
-        public bool HandleDoubleClick(Point mousePos, string currentSelectedItem, int scrollOffset, int titleHeight, int itemWidth, int textHeight, int windowWidth, out string updatedSelectedItem)
-        {
-            updatedSelectedItem = currentSelectedItem;
-            string hitPath = GetItemAtPosition(mousePos, scrollOffset, titleHeight, itemWidth, textHeight, windowWidth);
-            if (hitPath != null && hitPath == currentSelectedItem)
-            {
-                if (File.Exists(hitPath) || Directory.Exists(hitPath))
-                {
-                    var entry = FenceEntry.FromPath(hitPath);
-                    if (entry != null)
-                    {
-                        _logger.Info($"Double-clicked item '{Path.GetFileName(hitPath)}' in fence '{_fenceInfo.Name}'", "InteractionHandler");
-                        entry.Open();
-                    }
-                    return false; 
-                }
-                else
-                {
-                    // File doesn't exist: execute cleanup 
-                    _logger.Warning($"Double-clicked item no longer exists, removing: {hitPath}", "InteractionHandler");
-                    _fenceInfo.Files.Remove(hitPath);
-                    updatedSelectedItem = null; // Reset selected item
-                    Save();
-                    return true; // Tell the form a refresh is needed
-                }
-            }
 
-            return false;
-        }
+      
         public void HandleCancelDrag(string draggingItemPath)
         {
             if (string.IsNullOrEmpty(draggingItemPath)) return;
@@ -205,6 +184,237 @@ namespace Fenceless.Util
                 return true;
             }
             return false;
+        }
+        #endregion
+
+        // Handle core business logic for double-click events
+        public bool HandleDoubleClick(Point mousePos, string currentSelectedItem, int scrollOffset, int titleHeight, int itemWidth, int textHeight, int windowWidth, out string updatedSelectedItem)
+        {
+            updatedSelectedItem = currentSelectedItem;
+            string hitPath = GetItemAtPosition(mousePos, scrollOffset, titleHeight, itemWidth, textHeight, windowWidth);
+            if (hitPath != null && hitPath == currentSelectedItem)
+            {
+                if (File.Exists(hitPath) || Directory.Exists(hitPath))
+                {
+                    var entry = FenceEntry.FromPath(hitPath);
+                    if (entry != null)
+                    {
+                        _logger.Info($"Double-clicked item '{Path.GetFileName(hitPath)}' in fence '{_fenceInfo.Name}'", "InteractionHandler");
+                        entry.Open();
+                    }
+                    return false;
+                }
+                else
+                {
+                    // File doesn't exist: execute cleanup 
+                    _logger.Warning($"Double-clicked item no longer exists, removing: {hitPath}", "InteractionHandler");
+                    _fenceInfo.Files.Remove(hitPath);
+                    updatedSelectedItem = null; // Reset selected item
+                    Save();
+                    return true; // Tell the form a refresh is needed
+                }
+            }
+
+            return false;
+        }
+        public void HandleExternalDrop(string[] dropedFiles)
+        {
+            try
+            {
+                var addedFiles = 0;
+                _logger.Debug($"Processing {dropedFiles.Length} dropped files", "FenceWindow");
+
+                foreach (var file in dropedFiles)
+                {
+                    if (_fenceInfo.Files.Contains(file) || !ItemExists(file))
+                    {
+                        _logger.Debug($"Skipped file (already exists or invalid): {file}", "FenceWindow");
+                        continue;
+                    }
+                    if (Path.GetExtension(file).Equals(".lnk", StringComparison.OrdinalIgnoreCase))
+                    {
+                        #region ask user if to delete source link file
+                        string _isDeletePromptString = "";
+                        if (AppSettings.Instance.isDeleteSourceLinkFile == -1 || AppSettings.Instance.isAskDeleteSourceLinkFile) //init value ,ask user
+                        {
+                           DialogResult dialogResult = CustomMessageBox.Show(
+                                $"Do you want keep source link [{Path.GetFileNameWithoutExtension(file)}]?",
+                                "Fenceless | Message",
+                                MessageBoxButtons.YesNo,
+                                MessageBoxIcon.Question);
+                            if (dialogResult == DialogResult.Yes)
+                            {
+                                AppSettings.Instance.isDeleteSourceLinkFile = 0;
+                                _isDeletePromptString = "Keep source link file";
+                            }
+                            else if (dialogResult == DialogResult.No)
+                            {
+                                AppSettings.Instance.isDeleteSourceLinkFile = 1;
+                                _isDeletePromptString = "Delete source link file";
+                            }
+                        }
+                        if (AppSettings.Instance.isAskDeleteSourceLinkFile)
+                        {
+                            DialogResult dialogResult2 = CustomMessageBox.Show(
+                                $"Do you want always {_isDeletePromptString} ? \r\n If you select no, it will ask you again!\r\n\r\n(setting not saved persistently and message will again after program restarts.)",
+                                "Fenceless | Message",
+                                MessageBoxButtons.YesNo,
+                                MessageBoxIcon.Question);
+                            if (dialogResult2 == DialogResult.Yes)
+                            {
+                                AppSettings.Instance.isAskDeleteSourceLinkFile = false;
+                            }
+
+                        }
+
+                        #endregion
+                    }
+                    string newFile = file;
+                    if (AppSettings.Instance.isDeleteSourceLinkFile == 1)
+                    {
+                        newFile = DeleteSourceShortcutFile(file);
+                        _logger.Debug($"Deleted source link file for: {file}", "FenceWindow");
+                    }
+
+                    _fenceInfo.Files.Add(newFile);
+                    addedFiles++;
+                    _logger.Debug($"Added file to fence: {newFile}", "FenceWindow");
+
+
+                    if (addedFiles > 0)
+                    {
+                        _logger.Info($"Added {addedFiles} files to fence '{_fenceInfo.Name}'", "FenceWindow");
+                        Save();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Failed to process dropped files for fence '{_fenceInfo.Name}'", "FenceWindow", ex);
+            }
+        }
+
+        #region Ask user whether to keep the original shortcuts
+        private string DeleteSourceShortcutFile(string filePath)
+        {
+            string newfilepath = filePath; // make a clone
+            try
+            {
+                //only move .lnk files
+                if (!Path.GetExtension(filePath).Equals(".lnk", StringComparison.OrdinalIgnoreCase)) 
+                {
+                    _logger.Debug($"Not a shortcut file: {filePath}", "DeleteShortcutFile");
+                    return newfilepath;
+                }
+                if (File.Exists(filePath))
+                {
+                    string shortCutLinkBakPath = AppSettings.Instance.appDataPath + "\\shortcutbak";
+                    if (!Directory.Exists(shortCutLinkBakPath))
+                    {
+                        Directory.CreateDirectory(shortCutLinkBakPath);
+                    }
+                    newfilepath = Path.Combine(shortCutLinkBakPath, Path.GetFileName(filePath));
+                    File.Copy(filePath, newfilepath, true);
+                    if (File.Exists(newfilepath))
+                    {
+                        _logger.Debug($"Backed up shortcut to: {newfilepath}", "DeleteShortcutFile");
+                        FileAttributes attributes = File.GetAttributes(filePath);
+                        if ((attributes & FileAttributes.ReadOnly) == FileAttributes.ReadOnly)
+                            File.SetAttributes(filePath, attributes & ~FileAttributes.ReadOnly);
+                        File.Delete(filePath);
+                        _logger.Debug($"Deleted shortcut: {filePath}", "DeleteShortcutFile");
+                        if (IsDesktopFile(filePath)) NotifyDesktopChanged();
+                    }
+                    else
+                    {
+                        _logger.Warning($"Failed to back up shortcut to: {newfilepath}", "DeleteShortcutFile");
+                    }
+                }
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.Error($"Access denied when deleting shortcut: {filePath}", "DeleteShortcutFile");
+            }
+            catch (IOException ex)
+            {
+                _logger.Error($"IO error when deleting shortcut: {filePath}", "DeleteShortcutFile");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Error deleting shortcut: {filePath}", "DeleteShortcutFile");
+            }
+            return newfilepath;
+        }
+        private void NotifyDesktopChanged()
+        {
+            try
+            {
+                // send WM_SETTINGCHANGE notify FLUSH desktop 
+                SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_FLUSH, IntPtr.Zero, IntPtr.Zero);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Error notifying desktop change: {ex.Message}", "FenceWindow");
+            }
+        }
+        #endregion
+
+        private bool ItemExists(string path)
+        {
+            try
+            {
+                var exists = File.Exists(path) || Directory.Exists(path);
+                if (!exists)
+                {
+                    _logger.Warning($"Item does not exist: {path}", "FenceWindow");
+                }
+                return exists;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Error checking if item exists: {path}", "FenceWindow", ex);
+                return false;
+            }
+        }
+        private bool IsDesktopFile(string filePath)
+        {
+            try
+            {
+                string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                string fileDirectory = Path.GetDirectoryName(filePath);
+                return string.Equals(fileDirectory, desktopPath, StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+       
+        public List<string> ValidateAndCleanupItems()
+        {
+            var itemsToRemove = new List<string>();
+            try
+            {
+                foreach (var file in _fenceInfo.Files)
+                {
+                    if (!ItemExists(file))itemsToRemove.Add(file);
+                }
+
+                if (itemsToRemove.Count > 0)
+                {
+                    foreach (var item in itemsToRemove)
+                    {
+                        _fenceInfo.Files.Remove(item);
+                        _logger.Info($"Removed invalid {itemsToRemove.Count} item from fence '{_fenceInfo.Name}': {item}", "FenceWindow");
+                    }
+                    return itemsToRemove;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Error validating items in fence '{_fenceInfo.Name}'", "FenceWindow", ex);
+            }
+            return itemsToRemove;
         }
         private void Save() => FenceManager.Instance.UpdateFence(_fenceInfo);
         
