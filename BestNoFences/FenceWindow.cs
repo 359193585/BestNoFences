@@ -649,6 +649,7 @@ namespace Fenceless
             }
             _isFormDrag = false;
             _isDraggingForm = false;
+            isDraggingItem = false;
         }
         private void ResetDragUI()
         {

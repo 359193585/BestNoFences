@@ -231,17 +231,19 @@ namespace Fenceless.Util
                         _logger.Debug($"Skipped file (already exists or invalid): {file}", "FenceWindow");
                         continue;
                     }
+                    string newFile = file;
+
                     if (Path.GetExtension(file).Equals(".lnk", StringComparison.OrdinalIgnoreCase))
                     {
                         #region ask user if to delete source link file
                         string _isDeletePromptString = "";
                         if (AppSettings.Instance.isDeleteSourceLinkFile == -1 || AppSettings.Instance.isAskDeleteSourceLinkFile) //init value ,ask user
                         {
-                           DialogResult dialogResult = CustomMessageBox.Show(
-                                $"Do you want keep source link [{Path.GetFileNameWithoutExtension(file)}]?",
-                                "Fenceless | Message",
-                                MessageBoxButtons.YesNo,
-                                MessageBoxIcon.Question);
+                            DialogResult dialogResult = CustomMessageBox.Show(
+                                 $"Do you want keep source link [{Path.GetFileNameWithoutExtension(file)}]?",
+                                 "Fenceless | Message",
+                                 MessageBoxButtons.YesNo,
+                                 MessageBoxIcon.Question);
                             if (dialogResult == DialogResult.Yes)
                             {
                                 AppSettings.Instance.isDeleteSourceLinkFile = 0;
@@ -266,10 +268,14 @@ namespace Fenceless.Util
                             }
 
                         }
-
                         #endregion
                     }
-                    string newFile = file;
+                    else  // not a .lnk file, create new link file in  user appdata
+                    {
+                        newFile = CreateShortcutDynamic(file, AppSettings.Instance.appDataPath + "\\shortcutbak", Path.GetFileName(file),"","shortcut create by bestnofences",Path.GetDirectoryName(file));
+
+                    }
+
                     if (AppSettings.Instance.isDeleteSourceLinkFile == 1)
                     {
                         newFile = DeleteSourceShortcutFile(file);
@@ -389,7 +395,35 @@ namespace Fenceless.Util
                 return false;
             }
         }
-       
+        private string CreateShortcutDynamic(
+                string targetFilePath,
+                string shortcutDirectory,
+                string shortcutName,
+                string arguments = "",
+                string description = "",
+                string workingDirectory = null)
+        {
+            if (!File.Exists(targetFilePath)) return null;
+
+            if (!Directory.Exists(shortcutDirectory))
+                Directory.CreateDirectory(shortcutDirectory);
+
+            string shortcutPath = Path.Combine(shortcutDirectory, shortcutName);
+            if (!shortcutPath.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase))
+                shortcutPath += ".lnk";
+
+            Type shellType = Type.GetTypeFromProgID("WScript.Shell");
+            dynamic shell = Activator.CreateInstance(shellType);
+            dynamic shortcut = shell.CreateShortcut(shortcutPath); 
+
+            shortcut.TargetPath = targetFilePath;
+            shortcut.Arguments = arguments;
+            shortcut.Description = description;
+            shortcut.WorkingDirectory = workingDirectory ?? Path.GetDirectoryName(targetFilePath);
+            shortcut.Save();
+
+            return shortcutPath;
+        }
         public List<string> ValidateAndCleanupItems()
         {
             var itemsToRemove = new List<string>();
