@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System;
 using Fenceless.Win32;
 using Fenceless.Util;
+using Fenceless.UI;
+using System.Windows.Forms;
 
 namespace Fenceless.Model
 {
@@ -100,14 +102,24 @@ namespace Fenceless.Model
                     
                     if (Type == EntryType.File)
                     {
-                        var startInfo = new ProcessStartInfo
+                        var isValuade = new LnkHelper().AnalyzeLnkFile(fullPath);
+                        if (isValuade.TargetExists)
                         {
-                            FileName = fullPath,
-                            UseShellExecute = true,
-                            ErrorDialog = false // We'll handle errors ourselves
-                        };
-                        Process.Start(startInfo);
-                        logger?.Debug($"Opened file: {fullPath}", "FenceEntry");
+
+                            var startInfo = new ProcessStartInfo
+                            {
+                                FileName = fullPath,
+                                UseShellExecute = true,
+                                ErrorDialog = false // We'll handle errors ourselves
+                            };
+                            Process.Start(startInfo);
+                            logger?.Debug($"Opened file: {fullPath}", "FenceEntry");
+                        }
+                        else
+                        {
+                            MesgUserDeleteLnk(isValuade);
+
+                        }
                     }
                     else if (Type == EntryType.Folder)
                     {
@@ -134,6 +146,23 @@ namespace Fenceless.Model
                     );
                 }
             });
+        }
+        private void MesgUserDeleteLnk(LnkFileManager lnk)
+        {
+            DialogResult result = CustomMessageBox.Show(
+                                $"Failed to open '{lnk.TargetFilePath}' ,target file not found,do you want delete shortcun?",
+                                "Error Opening Item",
+                                MessageBoxButtons.YesNo,
+                                MessageBoxIcon.Error);
+            if (result == DialogResult.Yes)
+            {
+                try
+                {
+                    File.Delete(lnk.ShortcutFilePath);
+                }
+                catch { }
+            }
+
         }
     }
 }

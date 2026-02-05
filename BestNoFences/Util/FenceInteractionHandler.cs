@@ -7,7 +7,6 @@ using System.IO;
 using System.Windows.Forms;
 using static Fenceless.Win32.WindowUtil;
 
-
 namespace Fenceless.Util
 {
     public enum ClickActionResult { DragItem, DragForm, ItemRemoved, None }
@@ -272,8 +271,16 @@ namespace Fenceless.Util
                     }
                     else  // not a .lnk file, create new link file in  user appdata
                     {
-                        newFile = CreateShortcutDynamic(file, AppSettings.Instance.appDataPath + "\\shortcutbak", Path.GetFileName(file),"","shortcut create by bestnofences",Path.GetDirectoryName(file));
 
+                        var lnk = new LnkFileManager
+                        {
+                            TargetFilePath = file,
+                            ShortcutFilePath = AppSettings.Instance.appDataPath + "\\shortcutbak",
+                            ShortcutName = Path.GetFileName(file),
+                            Description ="shortcut create by bestnofences",
+                            WorkingDirectory=Path.GetDirectoryName(file)
+                        };
+                        newFile = new LnkHelper().CreateShortcutDynamic(lnk);
                     }
 
                     if (AppSettings.Instance.isDeleteSourceLinkFile == 1)
@@ -395,35 +402,7 @@ namespace Fenceless.Util
                 return false;
             }
         }
-        private string CreateShortcutDynamic(
-                string targetFilePath,
-                string shortcutDirectory,
-                string shortcutName,
-                string arguments = "",
-                string description = "",
-                string workingDirectory = null)
-        {
-            if (!File.Exists(targetFilePath)) return null;
-
-            if (!Directory.Exists(shortcutDirectory))
-                Directory.CreateDirectory(shortcutDirectory);
-
-            string shortcutPath = Path.Combine(shortcutDirectory, shortcutName);
-            if (!shortcutPath.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase))
-                shortcutPath += ".lnk";
-
-            Type shellType = Type.GetTypeFromProgID("WScript.Shell");
-            dynamic shell = Activator.CreateInstance(shellType);
-            dynamic shortcut = shell.CreateShortcut(shortcutPath); 
-
-            shortcut.TargetPath = targetFilePath;
-            shortcut.Arguments = arguments;
-            shortcut.Description = description;
-            shortcut.WorkingDirectory = workingDirectory ?? Path.GetDirectoryName(targetFilePath);
-            shortcut.Save();
-
-            return shortcutPath;
-        }
+       
         public List<string> ValidateAndCleanupItems()
         {
             var itemsToRemove = new List<string>();
