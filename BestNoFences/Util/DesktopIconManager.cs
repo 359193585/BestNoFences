@@ -209,11 +209,9 @@ public static class DesktopRegistryManager
     {
         try
         {
-            // 获取桌面窗口句柄
             IntPtr hDesktop = WindowUtil.FindWindow("Progman", "Program Manager");
             if (hDesktop != IntPtr.Zero)
             {
-                // 只向桌面窗口发送重绘消息
                 RedrawWindow(hDesktop, IntPtr.Zero, IntPtr.Zero,
                     RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_ALLCHILDREN | RDW_UPDATENOW | RDW_ERASENOW);
             }
@@ -228,7 +226,7 @@ public static class DesktopRegistryManager
     private const uint SC_MONITORPOWER = 0xF170;
     private const uint WM_SETTINGCHANGE = 0x001A;
 
-    // 重绘标志
+    // repaint 
     private const uint RDW_INVALIDATE = 0x0001;
     private const uint RDW_ERASE = 0x0004;
     private const uint RDW_FRAME = 0x0400;

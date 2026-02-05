@@ -32,7 +32,7 @@ namespace Fenceless.Util
         }
         public void ProcessMessage(ref Message m, FenceWindowBehaviorContent ctx)
         {
-            if (_isDebugMode) return; // 调试模式不拦截任何消息
+            if (_isDebugMode) return; // In debug mode, no messages are intercepted
 
             const int WM_NCHITTEST = 0x84;
 
