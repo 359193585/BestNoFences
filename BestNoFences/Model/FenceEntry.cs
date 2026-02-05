@@ -117,8 +117,7 @@ namespace Fenceless.Model
                         }
                         else
                         {
-                            MesgUserDeleteLnk(isValuade);
-
+                            DeleteLnkIfUserConfirms(isValuade);
                         }
                     }
                     else if (Type == EntryType.Folder)
@@ -138,16 +137,16 @@ namespace Fenceless.Model
                 {
                     logger?.Error($"Failed to open item '{Path}': {e.Message}", "FenceEntry", e);
                     // Show a user-friendly error message
-                    System.Windows.Forms.MessageBox.Show(
+                    MessageBox.Show(
                         $"Failed to open '{System.IO.Path.GetFileName(Path)}':\n\n{e.Message}",
                         "Error Opening Item",
-                        System.Windows.Forms.MessageBoxButtons.OK,
-                        System.Windows.Forms.MessageBoxIcon.Error
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error
                     );
                 }
             });
         }
-        private void MesgUserDeleteLnk(LnkFileManager lnk)
+        private void DeleteLnkIfUserConfirms(LnkFileManager lnk)
         {
             DialogResult result = CustomMessageBox.Show(
                                 $"Failed to open '{lnk.TargetFilePath}' ,target file not found,do you want delete shortcun?",
