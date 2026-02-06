@@ -120,12 +120,7 @@ namespace Fenceless
             logger.Info($"Fence window '{fenceInfo.Name}' created successfully at ({fenceInfo.PosX}, {fenceInfo.PosY})", "FenceWindow");
         }
 
-        private void ReloadFonts()
-        {
-            var family = new FontFamily("Segoe UI");
-            titleFont = new Font(family, (int)Math.Floor(logicalTitleHeight / 2.0));
-            iconFont = new Font(family, 9);
-        }
+       
 
         private void SetupEventHandlers()
         {
@@ -209,103 +204,12 @@ namespace Fenceless
             };
         }
 
-       
-
         private void settingsToolStripMenuItem_Click(object sender, EventArgs e)
         {
             FenceManager.Instance.ShowGlobalSettings();
         }
 
-        // Add methods for external control from FenceManager
-        public void UpdateAutoHideState()
-        {
-            if (_fenceInfo.AutoHide)
-            {
-                StartAutoHideTimer();
-            }
-            else
-            {
-                ShowFence();
-                StopAutoHideTimer();
-            }
-        }
-
-        public void ApplySettings()
-        {
-            // Apply transparency
-            SetTransparency(_fenceInfo.Transparency);
-
-            // Apply auto-hide settings
-            autoHideTimer.Interval = _fenceInfo.AutoHideDelay;
-            UpdateAutoHideState();
-
-            // Apply other settings
-            lockedToolStripMenuItem.Checked = _fenceInfo.Locked;
-            minifyToolStripMenuItem.Checked = _fenceInfo.CanMinify;
-
-            // Update title and size if changed
-            Text = _fenceInfo.Name;
-            Width = _fenceInfo.Width;
-            Height = _fenceInfo.Height;
-
-            // Update title height if changed
-            logicalTitleHeight = _fenceInfo.TitleHeight;
-            titleHeight = LogicalToDeviceUnits(logicalTitleHeight);
-            ReloadFonts();
-
-            // Clear icon cache if icon size changed
-            if (iconCache.CacheCount > 0)
-            {
-                ClearIconCache();
-            }
-
-            // Adjust height if minified
-            if (isMinified)
-            {
-                prevHeight = Height;
-                Height = titleHeight;
-            }
-
-            Refresh();
-            Save();
-        }
-
-        private void ClearIconCache()
-        {
-            try
-            {
-                logger.Debug($"Clearing icon cache ({iconCache.CacheCount} entries)", "FenceWindow");
-
-                iconCache.ClearCache();
-            }
-            catch (Exception ex)
-            {
-                logger.Error("Error clearing icon cache", "FenceWindow", ex);
-            }
-        }
-
-        private void InitializeAutoHide()
-        {
-            autoHideTimer = new FormsTimer();
-            autoHideTimer.Interval = _fenceInfo.AutoHideDelay;
-            autoHideTimer.Tick += AutoHideTimer_Tick;
-        }
-
-        private void SetTransparency(int transparencyPercent)
-        {
-            // Clamp transparency between 25 and 100
-            transparencyPercent = Math.Max(25, Math.Min(100, transparencyPercent));
-            _fenceInfo.Transparency = transparencyPercent;
-
-            normalOpacity = transparencyPercent / 100.0;
-            if (!isAutoHidden)
-            {
-                this.Opacity = normalOpacity;
-            }
-
-            Save();
-        }
-
+        #region auto hide manage
         private void AutoHideTimer_Tick(object sender, EventArgs e)
         {
             if (_fenceInfo.AutoHide && !isMouseInside && !isMinified)
@@ -346,7 +250,7 @@ namespace Fenceless
         {
             autoHideTimer.Stop();
         }
-
+        #endregion
         private void InitializeVisibilityMonitor()
         {
             visibilityMonitor = new System.Threading.Timer(_ => EnsureFenceVisible(true), null,
@@ -616,15 +520,16 @@ namespace Fenceless
 
                 if (action == ClickActionResult.DragItem)
                 {
+                    this.Cursor = Cursors.Hand;
                     _isDragReady = true;
                     _isFormDrag = false;
                     _handler.PrepareDrag(targetPath, e.Location); 
                     draggingItem = targetPath;
                     selectedItem = targetPath;
-                    this.Cursor = Cursors.Hand;
                 }
                 else if (action == ClickActionResult.DragForm)
                 {
+                    this.Cursor = Cursors.Default;
                     _isFormDrag = true;
                     _formDragStartPoint = e.Location;
                 }
@@ -650,6 +555,7 @@ namespace Fenceless
             _isFormDrag = false;
             _isDraggingForm = false;
             isDraggingItem = false;
+            //this.Cursor = Cursors.Default;
         }
         private void ResetDragUI()
         {
@@ -669,24 +575,7 @@ namespace Fenceless
             Invalidate();
             Refresh();
         }
-        private void SaveFormPosition()
-        {
-            try
-            {
-                if (this.Location.X < 0) this.Location = new Point(0, this.Location.Y);
-                if (this.Location.Y < 0) this.Location = new Point(this.Location.X, 0);
-
-                Screen screen = Screen.FromControl(this);
-                if (this.Right > screen.WorkingArea.Right)
-                    this.Location = new Point(screen.WorkingArea.Right - this.Width, this.Location.Y);
-                if (this.Bottom > screen.WorkingArea.Bottom)
-                    this.Location = new Point(this.Location.X, screen.WorkingArea.Bottom - this.Height);
-            }
-            catch (Exception ex)
-            {
-                logger.Error($"Failed to save form position: {ex.Message}", "FenceWindow");
-            }
-        }
+        
         private void FenceWindow_MouseEnter(object sender, EventArgs e)
         {
             isMouseInside = true;
@@ -717,31 +606,6 @@ namespace Fenceless
             Refresh();
         }
 
-        private void StartFormDrag()
-        {
-            if (!_isDraggingForm)
-            {
-                _isDraggingForm = true;
-
-                ReleaseCapture();
-                SendMessage(this.Handle, WM_NCLBUTTONDOWN, HT_CAPTION, 0);
-
-                _formDragStartPoint = this.Location;
-                logger.Debug("Started form drag", "FenceWindow");
-            }
-        }
-        
-        private void Minify()
-        {
-            if (minifyToolStripMenuItem.Checked && !isMinified)
-            {
-                isMinified = true;
-                prevHeight = Height;
-                Height = titleHeight;
-                Refresh();
-            }
-        }
-
         private void minifyToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (isMinified)
@@ -752,7 +616,6 @@ namespace Fenceless
             _fenceInfo.CanMinify = minifyToolStripMenuItem.Checked;
             Save();
         }
-
       
         private void FenceWindow_Click(object sender, EventArgs e)
         {
@@ -793,17 +656,31 @@ namespace Fenceless
             }
         }
 
-        private void newFenceToolStripMenuItem_Click(object sender, EventArgs e)
+        #region method 
+        private void StartFormDrag()
         {
-            FenceManager.Instance.CreateFence("New fence");
+            if (!_isDraggingForm)
+            {
+                _isDraggingForm = true;
+
+                ReleaseCapture();
+                SendMessage(this.Handle, WM_NCLBUTTONDOWN, HT_CAPTION, 0);
+
+                _formDragStartPoint = this.Location;
+                logger.Debug("Started form drag", "FenceWindow");
+            }
         }
 
-        private void FenceWindow_FormClosed(object sender, FormClosedEventArgs e)
+        private void Minify()
         {
-            if (Application.OpenForms.Count == 0)
-                Application.Exit();
+            if (minifyToolStripMenuItem.Checked && !isMinified)
+            {
+                isMinified = true;
+                prevHeight = Height;
+                Height = titleHeight;
+                Refresh();
+            }
         }
-
         // Add method to expose FenceInfo for manager
         public FenceInfo GetFenceInfo()
         {
@@ -922,6 +799,127 @@ namespace Fenceless
                 Save();
             });
         }
+        private void ReloadFonts()
+        {
+            var family = new FontFamily("Segoe UI");
+            titleFont = new Font(family, (int)Math.Floor(logicalTitleHeight / 2.0));
+            iconFont = new Font(family, 9);
+        }
+        public void UpdateAutoHideState()
+        {
+            if (_fenceInfo.AutoHide)
+            {
+                StartAutoHideTimer();
+            }
+            else
+            {
+                ShowFence();
+                StopAutoHideTimer();
+            }
+        }
+
+        public void ApplySettings()
+        {
+            // Apply transparency
+            SetTransparency(_fenceInfo.Transparency);
+
+            // Apply auto-hide settings
+            autoHideTimer.Interval = _fenceInfo.AutoHideDelay;
+            UpdateAutoHideState();
+
+            // Apply other settings
+            lockedToolStripMenuItem.Checked = _fenceInfo.Locked;
+            minifyToolStripMenuItem.Checked = _fenceInfo.CanMinify;
+
+            // Update title and size if changed
+            Text = _fenceInfo.Name;
+            Width = _fenceInfo.Width;
+            Height = _fenceInfo.Height;
+
+            // Update title height if changed
+            logicalTitleHeight = _fenceInfo.TitleHeight;
+            titleHeight = LogicalToDeviceUnits(logicalTitleHeight);
+            ReloadFonts();
+
+            // Clear icon cache if icon size changed
+            if (iconCache.CacheCount > 0)
+            {
+                ClearIconCache();
+            }
+
+            // Adjust height if minified
+            if (isMinified)
+            {
+                prevHeight = Height;
+                Height = titleHeight;
+            }
+
+            Refresh();
+            Save();
+        }
+        private void ClearIconCache()
+        {
+            try
+            {
+                logger.Debug($"Clearing icon cache ({iconCache.CacheCount} entries)", "FenceWindow");
+
+                iconCache.ClearCache();
+            }
+            catch (Exception ex)
+            {
+                logger.Error("Error clearing icon cache", "FenceWindow", ex);
+            }
+        }
+
+        private void InitializeAutoHide()
+        {
+            autoHideTimer = new FormsTimer();
+            autoHideTimer.Interval = _fenceInfo.AutoHideDelay;
+            autoHideTimer.Tick += AutoHideTimer_Tick;
+        }
+        private void SetTransparency(int transparencyPercent)
+        {
+            // Clamp transparency between 25 and 100
+            transparencyPercent = Math.Max(25, Math.Min(100, transparencyPercent));
+            _fenceInfo.Transparency = transparencyPercent;
+
+            normalOpacity = transparencyPercent / 100.0;
+            if (!isAutoHidden)
+            {
+                this.Opacity = normalOpacity;
+            }
+
+            Save();
+        }
+        private void SaveFormPosition()
+        {
+            try
+            {
+                if (this.Location.X < 0) this.Location = new Point(0, this.Location.Y);
+                if (this.Location.Y < 0) this.Location = new Point(this.Location.X, 0);
+
+                Screen screen = Screen.FromControl(this);
+                if (this.Right > screen.WorkingArea.Right)
+                    this.Location = new Point(screen.WorkingArea.Right - this.Width, this.Location.Y);
+                if (this.Bottom > screen.WorkingArea.Bottom)
+                    this.Location = new Point(this.Location.X, screen.WorkingArea.Bottom - this.Height);
+            }
+            catch (Exception ex)
+            {
+                logger.Error($"Failed to save form position: {ex.Message}", "FenceWindow");
+            }
+        }
+        #endregion
+        private void newFenceToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            FenceManager.Instance.CreateFence("New fence");
+        }
+
+        private void FenceWindow_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            if (Application.OpenForms.Count == 0)
+                Application.Exit();
+        }
 
         private void lockedToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -1012,9 +1010,9 @@ namespace Fenceless
             Invalidate();
         }
 
-      
 
-        #region override methods
+
+        #region protected override methods
         protected override void WndProc(ref Message m)
         {
             var ctx = new FenceWindowBehaviorContent
