@@ -1,11 +1,12 @@
-using System;
-using System.Text;
-using System.Runtime.InteropServices;
-using System.Drawing;
-using System.Windows.Forms;
-using System.IO;
-using System.Threading;
 using Fenceless.Util;
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading;
+using System.Windows.Forms;
 
 namespace Peter
 {
@@ -454,7 +455,7 @@ namespace Peter
             _customMenuProvider = customMenuProvider;
             if (files != null && files.Length > 0)
                 _currentFilePath = files[0].FullName;
-            
+
             // Release all resources first.
             ReleaseAll();
             _arrPIDLs = GetPIDLs(files);
@@ -492,7 +493,7 @@ namespace Peter
             _customMenuProvider = customMenuProvider;
             if (dirs != null && dirs.Length > 0)
                 _currentFilePath = dirs[0].FullName;
-            
+
             // Release all resources first.
             ReleaseAll();
             _arrPIDLs = GetPIDLs(dirs);
@@ -547,7 +548,7 @@ namespace Peter
                         {
                             // Add separator before custom items
                             InsertMenuItem(pMenu, 0, true, new MENUITEMINFO { fMask = MIIM.TYPE, fType = MFT.SEPARATOR });
-                            
+
                             // Add custom menu item
                             var menuItemInfo = new MENUITEMINFO(customMenuItemText)
                             {
@@ -1258,7 +1259,7 @@ namespace Peter
             Int32 ParseDisplayName(
                 IntPtr hwnd,
                 IntPtr pbc,
-                [MarshalAs(UnmanagedType.LPWStr)] 
+                [MarshalAs(UnmanagedType.LPWStr)]
             string pszDisplayName,
                 ref uint pchEaten,
                 out IntPtr ppidl,
@@ -1353,7 +1354,7 @@ namespace Peter
             Int32 SetNameOf(
                 IntPtr hwnd,
                 IntPtr pidl,
-                [MarshalAs(UnmanagedType.LPWStr)] 
+                [MarshalAs(UnmanagedType.LPWStr)]
             string pszName,
                 SHGNO uFlags,
                 out IntPtr ppidlOut);
@@ -1480,10 +1481,54 @@ namespace Peter
                 IntPtr plResult);
         }
         #endregion
+
+        #region  ShowContextMenuWithSubMenu
+
+        public static void ShowContextMenuWithSubMenu(
+            FileInfo[] files,
+            Point location,
+            List<ShellMenuItem> customItems)
+        {
+            IntPtr hMenu = CreatePopupMenu();
+            //AddSystemMenuItems(hMenu, files);
+            AddCustomMenuItemsWithSubMenu(hMenu, customItems, files);
+            //ShowMenu(hMenu, location);
+        }
+        private static void AddCustomMenuItemsWithSubMenu(
+            IntPtr hMenu,
+            List<ShellMenuItem> menuItems,
+            FileInfo[] files,
+            uint startId = 1000)
+        {
+            //foreach (var item in menuItems)
+            //{
+            //    if (item.HasSubItems)
+            //    {
+            //        // 创建子菜单
+            //        IntPtr hSubMenu = CreatePopupMenu();
+
+            //        // 递归添加子菜单项
+            //        AddCustomMenuItemsWithSubMenu(hSubMenu, item.SubItems, files, startId + 100);
+
+            //        // 添加父菜单项
+            //        AppendMenu(hMenu, MF_STRING | MF_POPUP, (UIntPtr)hSubMenu, item.Text);
+            //    }
+            //    else
+            //    {
+            //        // 添加普通菜单项
+            //        AppendMenu(hMenu, MF_STRING, (UIntPtr)startId, item.Text);
+            //        _menuCommands[startId] = item.Action;
+            //        startId++;
+            //    }
+            //}
+        }
+    #endregion
     }
 
-    #region ShellContextMenuException
-    public class ShellContextMenuException : Exception
+
+
+#region ShellContextMenuException
+public class ShellContextMenuException : Exception
     {
         /// <summary>Default contructor</summary>
         public ShellContextMenuException()
@@ -1688,4 +1733,13 @@ namespace Peter
     }
 
     #endregion
+
+ 
+        public class ShellMenuItem
+    {
+        public string Text { get; set; }
+        public Action<FileInfo[]> Action { get; set; }
+        public List<ShellMenuItem> SubItems { get; set; }
+        public bool HasSubItems => SubItems?.Count > 0;
+    }
 }

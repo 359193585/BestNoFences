@@ -75,6 +75,7 @@ namespace Fenceless.Model
         public int isDeleteSourceLinkFile { get; set; } = -1;  // FFNESI: delete source .lnk file when drag icon in fence,not saved in settings.json, only in memory during runtime,0=do not delete, 1=delete,-1=unset ask user
         public bool isAskDeleteSourceLinkFile { get; set; } = true; // FFNESI: ask user whether to delete source .lnk file when drag icon in fence, not saved in settings.json, only in memory during runtime, init value is true
         public string appDataPath;
+        public string appDataPathShortcutBak;
         private AppSettings()
         {
             // Initialize logger first, but handle case where it might not be available yet
@@ -82,6 +83,7 @@ namespace Fenceless.Model
             {
                 logger = Logger.Instance;
                 appDataPath = logger.appDataPath;
+                appDataPathShortcutBak = appDataPath + "\\shortcutbak";
             }
             catch
             {

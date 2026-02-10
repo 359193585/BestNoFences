@@ -4,6 +4,7 @@ using Fenceless.Util;
 using Fenceless.Win32;
 using Peter;
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -61,6 +62,7 @@ namespace Fenceless
         private readonly ThrottledExecution throttledMove = new ThrottledExecution(TimeSpan.FromSeconds(4));
         private readonly ThrottledExecution throttledResize = new ThrottledExecution(TimeSpan.FromSeconds(4));
         private readonly ShellContextMenu shellContextMenu = new ShellContextMenu();
+        private readonly ShellContextMenu shellContextMenu2 = new ShellContextMenu();
         private readonly ThumbnailProvider thumbnailProvider = new ThumbnailProvider();
         private readonly FenceInfo _fenceInfo;
         private readonly Logger logger;
@@ -952,12 +954,59 @@ namespace Fenceless
                     MousePosition,
                     (filePath) => "Remove from fence"
                 );
+
+                //ShowCustomContextMenu(hoveringItem, MousePosition);
             }
             else
             {
                 appContextMenu.Show(this, e.Location);
             }
         }
+
+
+
+        private void ShowCustomContextMenu(string filePath, Point location)
+        {
+            ContextMenuStrip customMenu = new ContextMenuStrip();
+            ToolStripMenuItem removeItem = new ToolStripMenuItem("Remove from fence");
+            removeItem.Click += (s, e) => OnRemoveFromFence(this, new CustomMenuEventArgs(filePath));
+
+            ToolStripMenuItem addItem = new ToolStripMenuItem("Back to desktop");
+            addItem.Click += (s, e) => OnBackToDesktop(this, new CustomMenuEventArgs(filePath));
+
+            ToolStripMenuItem systemMenuItem = new ToolStripMenuItem("System Menu");
+            systemMenuItem.Click += (s, e) => ShowSystemContextMenu(filePath, location);
+
+            customMenu.Items.AddRange(new ToolStripItem[]
+            {
+                removeItem,
+                addItem,
+                new ToolStripSeparator(),
+                systemMenuItem
+            });
+            customMenu.Show(location);
+        }
+
+        private void OnBackToDesktop(FenceWindow fenceWindow, CustomMenuEventArgs customMenuEventArgs)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void ShowSystemContextMenu(string filePath, Point location)
+        {
+            ShellContextMenu shellMenu = new ShellContextMenu();
+            shellMenu.ShowContextMenu(
+                new[] { new FileInfo(filePath) },
+                location
+            );
+        }
+
+
+
+
+
+
+
 
         private void OnRemoveFromFence(object sender, CustomMenuEventArgs e)
         {

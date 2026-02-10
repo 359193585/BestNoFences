@@ -321,7 +321,7 @@ namespace Fenceless.Util
                 }
                 if (File.Exists(filePath))
                 {
-                    string shortCutLinkBakPath = AppSettings.Instance.appDataPath + "\\shortcutbak";
+                    string shortCutLinkBakPath = AppSettings.Instance.appDataPathShortcutBak;
                     if (!Directory.Exists(shortCutLinkBakPath))
                     {
                         Directory.CreateDirectory(shortCutLinkBakPath);

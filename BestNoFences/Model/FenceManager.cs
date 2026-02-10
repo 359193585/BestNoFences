@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using System.Xml.Serialization;
+using static Fenceless.Win32.WindowUtil;
 
 namespace Fenceless.Model
 {
@@ -297,6 +298,7 @@ namespace Fenceless.Model
                 var folderPath = GetFolderPath(info);
                 if (Directory.Exists(folderPath))
                 {
+                    SendItemToSource(info);
                     Directory.Delete(folderPath, true);
                     logger.Debug($"Deleted fence directory: {folderPath}", "FenceManager");
                 }
@@ -305,6 +307,26 @@ namespace Fenceless.Model
             catch (Exception ex)
             {
                 logger.Error($"Failed to remove fence '{info.Name}'", "FenceManager", ex);
+            }
+        }
+        private void SendItemToSource(FenceInfo info)
+        {
+            foreach (var item in info.Files)
+            {
+                string itemPath = Path.GetDirectoryName(item);
+                bool isInBakPath = itemPath.TrimEnd('\\') == AppSettings.Instance.appDataPathShortcutBak.TrimEnd('\\');
+                if (isInBakPath)
+                {
+                    try
+                    {
+                        string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                        string newFile = Path.Combine(desktopPath, Path.GetFileName(item));
+                        File.Copy(item, newFile,false);
+                        // send WM_SETTINGCHANGE notify FLUSH desktop 
+                        SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_FLUSH, IntPtr.Zero, IntPtr.Zero);
+                    }
+                    catch { }
+                }
             }
         }
 
