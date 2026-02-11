@@ -281,7 +281,8 @@ namespace Fenceless.Model
                 activeFences.Add(fenceWindow);
                 fenceWindow.FormClosed += (s, e) => activeFences.Remove(fenceWindow);
                 fenceWindow.Show();
-                
+                fenceWindow.BringToFront();
+
                 logger.Info($"Fence '{name}' created successfully with ID {fenceInfo.Id}", "FenceManager");
             }
             catch (Exception ex)

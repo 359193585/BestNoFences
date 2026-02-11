@@ -83,7 +83,7 @@ namespace Fenceless.Model
             {
                 logger = Logger.Instance;
                 appDataPath = logger.appDataPath;
-                appDataPathShortcutBak = appDataPath + "\\shortcutbak";
+                appDataPathShortcutBak = Path.Combine(appDataPath, "shortcutbak");
             }
             catch
             {
