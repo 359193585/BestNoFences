@@ -36,6 +36,14 @@ namespace Fenceless.Win32
         public const uint WM_COMMAND = 0x0111;
         public const uint WM_WINDOWPOSCHANGING = 0x0046;
         public const uint WM_WINDOWPOSCHANGED = 0x0047;
+        public const uint WMNCLBUTTONDOWN = 0x00A1;
+        public const uint WM_NCLBUTTONUP = 0x00A2;
+        public const uint WM_LBUTTONDOWN = 0x0201;
+        public const uint WM_LBUTTONUP = 0x0202;
+        public const uint WM_NCMOUSEMOVE = 0x00A0;
+        public const uint WM_MOUSEMOVE = 0x0200;
+        public const uint WM_KEYDOWN = 0x0100;
+        public const uint WM_KEYUP = 0x0101;
 
         // Shell taskbar commands triggered by Show Desktop
         public const uint MIN_ALL = 0x01A3;

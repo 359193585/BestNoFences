@@ -1064,6 +1064,7 @@ namespace Fenceless
         #region protected override methods
         protected override void WndProc(ref Message m)
         {
+            base.WndProc(ref m);
             var ctx = new FenceWindowBehaviorContent
             {
                 IsDraggingItem = isDraggingItem,
@@ -1073,7 +1074,6 @@ namespace Fenceless
                 MousePos = PointToClient(MousePosition)
             };
             _behaviorManager.ProcessMessage(ref m, ctx);
-            base.WndProc(ref m);
         }
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {

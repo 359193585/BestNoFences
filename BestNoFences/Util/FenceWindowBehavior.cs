@@ -17,7 +17,6 @@ namespace Fenceless.Util
         public FenceWindowBehavior(Form form,FenceInfo fenceInfo)
         {
             _targetForm = form;
-            
             _fenceInfo = fenceInfo;
         }
         public void ApplyStyles(bool isDebugMode)
@@ -30,12 +29,40 @@ namespace Fenceless.Util
             }
 
         }
-        public void ProcessMessage(ref Message m, FenceWindowBehaviorContent ctx)
+        public bool ProcessMessage( ref Message m, FenceWindowBehaviorContent ctx)
         {
-            if (_isDebugMode) return; // In debug mode, no messages are intercepted
+            if (ctx == null ) return false;
 
-            const int WM_NCHITTEST = 0x84;
+            // Then, allow dragging and resizing
+            // If you comment out this section of code, it is easy to cause the form - flickering problem.
+            if (m.Msg == WM_NCHITTEST)
+            {
 
+                // Don't allow form dragging if we're dragging an item
+                if (ctx.IsDraggingItem)
+                {
+                    m.Result = (IntPtr)HTCLIENT;
+                    return true;
+                }
+                var pt = _targetForm.PointToClient(new Point(m.LParam.ToInt32()));
+                int borderSize = 10;
+
+                if (pt.X < borderSize && pt.Y < borderSize)
+                    m.Result = new IntPtr(HTTOPLEFT);
+                else if (pt.X > (_targetForm.Width - borderSize) && pt.Y < borderSize)
+                    m.Result = new IntPtr(HTTOPRIGHT);
+                else if (pt.X < borderSize && pt.Y > (_targetForm.Height - borderSize))
+                    m.Result = new IntPtr(HTBOTTOMLEFT);
+                else if (pt.X > (_targetForm.Width - borderSize) && pt.Y > (_targetForm.Height - borderSize))
+                    m.Result = new IntPtr(HTBOTTOMRIGHT);
+                else if (pt.Y > (_targetForm.Height - borderSize))
+                    m.Result = new IntPtr(HTBOTTOM);
+                else if (pt.X < borderSize)
+                    m.Result = new IntPtr(HTLEFT);
+                else if (pt.X > (_targetForm.Width - borderSize))
+                    m.Result = new IntPtr(HTRIGHT);
+                return true;
+            }
             // new screen resolution
             if (m.Msg == WM_DISPLAYCHANGE)
             {
@@ -43,8 +70,26 @@ namespace Fenceless.Util
                 int newHeight = (int)m.LParam >> 16;    // lParam high 16 bits is height
                 int colorDepth = (int)m.WParam;         // wParam means color depth
                 FenceManager.Instance.SizeAllFence();
+                //return true;
             }
 
+            // 处理鼠标按下消息 - 不拦截，让基类处理
+            if (m.Msg == WM_NCLBUTTONDOWN || m.Msg == WM_LBUTTONDOWN)
+            {
+                return false;  // 让基类处理
+            }
+
+            // 处理鼠标释放消息 - 不拦截，让基类处理
+            if (m.Msg == WM_NCLBUTTONUP || m.Msg == WM_LBUTTONUP)
+            {
+                return false;  // 让基类处理
+            }
+
+            // 处理鼠标移动消息 - 不拦截，让基类处理
+            if (m.Msg == WM_NCMOUSEMOVE || m.Msg == WM_MOUSEMOVE)
+            {
+                return false;  // 让基类处理
+            }
             // Mouse leave
             var myrect = new Rectangle(new Point(_fenceInfo.PosX, _fenceInfo.PosY), new Size(_fenceInfo.Width,_fenceInfo.Height));
             if (m.Msg == 0x02a2 && !myrect.IntersectsWith(
@@ -60,10 +105,15 @@ namespace Fenceless.Util
                 if (command == SC_MAXIMIZE || command == SC_MINIMIZE)
                 {
                     m.Result = IntPtr.Zero;
-                    return;
+                    return true;
                 }
+                return false;
             }
-
+            // 处理键盘消息 - 不拦截
+            if (m.Msg == WM_KEYDOWN || m.Msg == WM_KEYUP)
+            {
+                return false;  // 让基类处理
+            }
             // Prevent window from being hidden (Show Desktop)
             if (m.Msg == WM_SHOWWINDOW && m.WParam == IntPtr.Zero)
             {
@@ -71,7 +121,7 @@ namespace Fenceless.Util
                 if (!ctx.IsAutoHidden && !ctx.IsDisposed)
                 {
                     m.Result = IntPtr.Zero;
-                    return;
+                    //return false;
                 }
             }
 
@@ -88,6 +138,7 @@ namespace Fenceless.Util
                     {
                         wp.flags &= ~HideWindowFlag;
                         Marshal.StructureToPtr(wp, m.LParam, false);
+                        //return false;
                     }
                 }
             }
@@ -96,7 +147,7 @@ namespace Fenceless.Util
             {
                 //EnsureFenceVisible();
                 m.Result = IntPtr.Zero;
-                return;
+                //return true;
             }
 
             if (m.Msg == WM_WINDOWPOSCHANGED)
@@ -125,38 +176,11 @@ namespace Fenceless.Util
             if (m.Msg == WM_SETFOCUS)
             {
                 SendToDesktopBack();
-                return;
+                //return true;
             }
 
-            // Then, allow dragging and resizing
-            // If you comment out this section of code, it is easy to cause the form - flickering problem.
-            //if (m.Msg == WM_NCHITTEST)
-            //{
-            //    //var pt = PointToClient(new Point(m.LParam.ToInt32()));
-
-            //    //// Don't allow form dragging if we're dragging an item
-            //    //if (ctx.IsDraggingItem)
-            //    //{
-            //    //    m.Result = (IntPtr)HTCLIENT;
-            //    //    return;
-            //    //}
-
-           
-            //    //if (pt.X < 10 && pt.Y < 10)
-            //    //    m.Result = new IntPtr(HTTOPLEFT);
-            //    //else if (pt.X > (_targetForm.Width - 10) && pt.Y < 10)
-            //    //    m.Result = new IntPtr(HTTOPRIGHT);
-            //    //else if (pt.X < 10 && pt.Y > (_targetForm.Height - 10))
-            //    //    m.Result = new IntPtr(HTBOTTOMLEFT);
-            //    //else if (pt.X > (_targetForm.Width - 10) && pt.Y > (_targetForm.Height - 10))
-            //    //    m.Result = new IntPtr(HTBOTTOMRIGHT);
-            //    //else if (pt.Y > (_targetForm.Height - 10))
-            //    //    m.Result = new IntPtr(HTBOTTOM);
-            //    //else if (pt.X < 10)
-            //    //    m.Result = new IntPtr(HTLEFT);
-            //    //else if (pt.X > (_targetForm.Width - 10))
-            //    //    m.Result = new IntPtr(HTRIGHT);
-            //}
+          
+            return false;
         }
         private void SendToDesktopBack()
         {
