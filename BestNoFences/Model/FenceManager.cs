@@ -245,8 +245,8 @@ namespace Fenceless.Model
             {
                 logger.Info($"Creating new fence: '{name}'", "FenceManager");
                 var settings = AppSettings.Instance;
-                settings.DefaultFenceWidth = Screen.PrimaryScreen.WorkingArea.Width / 4;
-                settings.DefaultFenceHeight = Screen.PrimaryScreen.WorkingArea.Height / 3;
+                settings.DefaultFenceWidth = Screen.PrimaryScreen.WorkingArea.Width / 5;
+                settings.DefaultFenceHeight = Screen.PrimaryScreen.WorkingArea.Height / 4;
                 
                 var nonOverlappingPos = FindNonOverlappingPosition(new Size(settings.DefaultFenceWidth, settings.DefaultFenceHeight), activeFences);
                 settings.DefaultFencePosX = nonOverlappingPos.X;
