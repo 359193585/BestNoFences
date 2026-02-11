@@ -247,8 +247,10 @@ namespace Fenceless.Model
                 var settings = AppSettings.Instance;
                 settings.DefaultFenceWidth = Screen.PrimaryScreen.WorkingArea.Width / 4;
                 settings.DefaultFenceHeight = Screen.PrimaryScreen.WorkingArea.Height / 3;
-                settings.DefaultFencePosX = (Screen.PrimaryScreen.WorkingArea.Width - settings.DefaultFenceWidth) / 2;
-                settings.DefaultFencePosY = (Screen.PrimaryScreen.WorkingArea.Height - settings.DefaultFenceHeight) / 2;
+                
+                var nonOverlappingPos = FindNonOverlappingPosition(new Size(settings.DefaultFenceWidth, settings.DefaultFenceHeight), activeFences);
+                settings.DefaultFencePosX = nonOverlappingPos.X;
+                settings.DefaultFencePosY = nonOverlappingPos.Y;
 
                 var fenceInfo = new FenceInfo(Guid.NewGuid())
                 {
@@ -291,6 +293,42 @@ namespace Fenceless.Model
             }
         }
 
+        public Point FindNonOverlappingPosition(Size fenceSize, List<FenceWindow> existingFences)
+        {
+            Rectangle screenBounds = Screen.PrimaryScreen.WorkingArea;
+            int offsetX = fenceSize.Width / 2;
+            int offsetY = fenceSize.Height / 2;
+            for (int y = screenBounds.Top; y <= screenBounds.Bottom - fenceSize.Height; y += offsetY)
+            {
+                for (int x = screenBounds.Left; x <= screenBounds.Right - fenceSize.Width; x += offsetX)
+                {
+                    Rectangle candidateRect = new Rectangle(x, y, fenceSize.Width, fenceSize.Height);
+                    bool overlaps = false;
+                    foreach (var existingFence in existingFences)
+                    {
+                        if (existingFence.Visible && !existingFence.IsDisposed)
+                        {
+                            Rectangle existingRect = new Rectangle(
+                                existingFence.Location, existingFence.Size);
+
+                            if (candidateRect.IntersectsWith(existingRect))
+                            {
+                                overlaps = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!overlaps)
+                    {
+                        return new Point(x, y);
+                    }
+                }
+            }
+            int centerX = (screenBounds.Width - fenceSize.Width) / 2;
+            int centerY = (screenBounds.Height - fenceSize.Height) / 2;
+            return new Point(centerX, centerY);
+        }
         public void RemoveFence(FenceInfo info)
         {
             try
