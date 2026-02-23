@@ -34,6 +34,42 @@
     <DefineConstants>TRACE</DefineConstants>
 	<OutputPath>bin\Release\</OutputPath>
 	<SelfContained>true</SelfContained>
+
+
+	  <Version>1.2.0.0</Version>
+	  <FileVersion>1.2.0.0</FileVersion>
+
+	  <PublishDir>bin\release\BestFences_single</PublishDir>
+
+	  <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+	  <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+
+	  <PublishSingleFile>true</PublishSingleFile>
+
+	  <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+	  <SelfContained>true</SelfContained>
+
+	  <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+
+	  <Optimize>False</Optimize>
+
+	  <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   </PropertyGroup>
 
   <ItemGroup>
@@ -77,4 +113,12 @@
     </None>
   </ItemGroup>
 
+
+
+
+	<Target Name="AutoPublishOnReleaseBuild" AfterTargets="Build" Condition=" '$(Configuration)' == 'Release' ">
+		<Message Importance="high" Text="开始自动发布流程..." />
+		<Exec Command="dotnet publish -c Release --no-build" />
+	</Target>
+	
 </Project>
