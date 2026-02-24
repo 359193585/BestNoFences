@@ -36,9 +36,12 @@
 	<SelfContained>true</SelfContained>
 
 
-	  <Version>1.2.0.0</Version>
 	  <FileVersion>1.2.0.0</FileVersion>
-
+	  <AssemblyVersion>1.2.0.0</AssemblyVersion>
+	  <InformationalVersion>1.2.0.0</InformationalVersion>
+	  
+	  <Deterministic>true</Deterministic>
+	  <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 	  <PublishDir>bin\release\BestFences_single</PublishDir>
 
 	  <RuntimeIdentifier>win-x64</RuntimeIdentifier>
@@ -118,7 +121,7 @@
 
 	<Target Name="AutoPublishOnReleaseBuild" AfterTargets="Build" Condition=" '$(Configuration)' == 'Release' ">
 		<Message Importance="high" Text="开始自动发布流程..." />
-		<Exec Command="dotnet publish -c Release --no-build" />
+		<Exec Command="dotnet publish -c Release --no-build -p:Deterministic=true" />
 	</Target>
 	
 </Project>
