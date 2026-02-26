@@ -44,15 +44,12 @@ namespace DesktopIconControl
 
         #endregion
 
-        /// <summary>
-        /// 获取桌面 ListView 句柄
-        /// </summary>
+      
         private static IntPtr GetDesktopListView()
         {
             IntPtr progman = FindWindow("Progman", null);
             IntPtr shellViewWin = IntPtr.Zero;
 
-            // 查找 SHELLDLL_DefView
             IntPtr desktopWnd = IntPtr.Zero;
             while ((desktopWnd = FindWindowEx(IntPtr.Zero, desktopWnd, "WorkerW", null)) != IntPtr.Zero)
             {
@@ -72,9 +69,7 @@ namespace DesktopIconControl
             return FindWindowEx(shellViewWin, IntPtr.Zero, "SysListView32", "FolderView");
         }
 
-        /// <summary>
-        /// 开启 自动排列图标
-        /// </summary>
+        
         public static void EnableAutoArrange()
         {
             IntPtr listView = GetDesktopListView();
@@ -86,9 +81,6 @@ namespace DesktopIconControl
             SetWindowLong(listView, GWL_STYLE, style);
         }
 
-        /// <summary>
-        /// 开启 与网格对齐
-        /// </summary>
         public static void EnableSnapToGrid()
         {
             IntPtr listView = GetDesktopListView();
@@ -102,9 +94,7 @@ namespace DesktopIconControl
                 (IntPtr)LVS_EX_SNAPTOGRID);
         }
 
-        /// <summary>
-        /// 同时启用两个功能
-        /// </summary>
+       
         public static void ArrangeIconsLeft()
         {
             EnableAutoArrange();
@@ -137,18 +127,15 @@ namespace DesktopIconControl
             IntPtr listView = GetDesktopListView();
             if (listView == IntPtr.Zero) return;
 
-            // 开启自动排列
             int style = GetWindowLong(listView, GWL_STYLE);
             style |= LVS_AUTOARRANGE;
             SetWindowLong(listView, GWL_STYLE, style);
 
-            // 开启网格对齐
             SendMessage(listView,
                 LVM_SETEXTENDEDLISTVIEWSTYLE,
                 (IntPtr)LVS_EX_SNAPTOGRID,
                 (IntPtr)LVS_EX_SNAPTOGRID);
 
-            // 强制重新排列
             SendMessage(listView,
                 LVM_ARRANGE,
                 IntPtr.Zero,

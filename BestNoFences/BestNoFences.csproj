@@ -124,7 +124,7 @@
 
 
 	<Target Name="AutoPublishOnReleaseBuild" AfterTargets="Build" Condition=" '$(Configuration)' == 'Release' ">
-		<Message Importance="high" Text="开始自动发布流程..." />
+		<Message Importance="high" Text="start auto publish..." />
 		<Exec Command="dotnet publish -c Release --no-build -p:Deterministic=true" />
 	</Target>
 	

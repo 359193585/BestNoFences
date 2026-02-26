@@ -71,19 +71,19 @@ namespace Fenceless.Util
                 //return true;
             }
                         
-            // 处理鼠标按下消息 - 不拦截，让基类处理 handle mouse down messages - don't intercept, let the base class handle it
+            //  handle mouse down messages - don't intercept, let the base class handle it
             if (m.Msg == WM_NCLBUTTONDOWN || m.Msg == WM_LBUTTONDOWN)
             {
                 return false;  // let the base class handle it
             }
 
-            // 处理鼠标释放消息 - 不拦截，让基类处理 handle mouse up messages - don't intercept, let the base class handle it
+            //  handle mouse up messages - don't intercept, let the base class handle it
             if (m.Msg == WM_NCLBUTTONUP || m.Msg == WM_LBUTTONUP)
             {
                 return false;  // let the base class handle it
             }
 
-            // 处理鼠标移动消息 - 不拦截，让基类处理 handle mouse move messages - don't intercept, let the base class handle it
+            //  handle mouse move messages - don't intercept, let the base class handle it
             if (m.Msg == WM_NCMOUSEMOVE || m.Msg == WM_MOUSEMOVE)
             {
                 return false;  
@@ -113,7 +113,7 @@ namespace Fenceless.Util
                 }
                 return false;
             }
-            // 处理键盘消息 - 不拦截 handle keyboard messages - don't intercept
+            //   handle keyboard messages - don't intercept
             if (m.Msg == WM_KEYDOWN || m.Msg == WM_KEYUP)
             {
                 return false;  

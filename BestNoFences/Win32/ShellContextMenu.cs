@@ -1500,35 +1500,15 @@ namespace Peter
             FileInfo[] files,
             uint startId = 1000)
         {
-            //foreach (var item in menuItems)
-            //{
-            //    if (item.HasSubItems)
-            //    {
-            //        // 创建子菜单
-            //        IntPtr hSubMenu = CreatePopupMenu();
-
-            //        // 递归添加子菜单项
-            //        AddCustomMenuItemsWithSubMenu(hSubMenu, item.SubItems, files, startId + 100);
-
-            //        // 添加父菜单项
-            //        AppendMenu(hMenu, MF_STRING | MF_POPUP, (UIntPtr)hSubMenu, item.Text);
-            //    }
-            //    else
-            //    {
-            //        // 添加普通菜单项
-            //        AppendMenu(hMenu, MF_STRING, (UIntPtr)startId, item.Text);
-            //        _menuCommands[startId] = item.Action;
-            //        startId++;
-            //    }
-            //}
+           
         }
     #endregion
     }
 
 
 
-#region ShellContextMenuException
-public class ShellContextMenuException : Exception
+    #region ShellContextMenuException
+    public class ShellContextMenuException : Exception
     {
         /// <summary>Default contructor</summary>
         public ShellContextMenuException()
@@ -1735,7 +1715,7 @@ public class ShellContextMenuException : Exception
     #endregion
 
  
-        public class ShellMenuItem
+    public class ShellMenuItem
     {
         public string Text { get; set; }
         public Action<FileInfo[]> Action { get; set; }
