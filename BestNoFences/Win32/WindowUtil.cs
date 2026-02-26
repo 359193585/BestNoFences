@@ -50,7 +50,7 @@ namespace Fenceless.Win32
         public const uint MIN_ALL_UNDO = 0x01A0;
 
         public const uint WM_DISPLAYCHANGE = 0x007E;
-
+        public const int WM_DPICHANGED = 0x02E0;
 
         public const uint SHCNE_ASSOCCHANGED = 0x08000000;
         public const uint SHCNF_FLUSH = 0x1000;

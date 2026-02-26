@@ -15,8 +15,8 @@
     <AssemblyDescription>Open Source Alternative to 'Stardock Fences'</AssemblyDescription>
     <AssemblyProduct>Fenceless</AssemblyProduct>
     <AssemblyCopyright>Copyright © Damianttje 2025</AssemblyCopyright>
-    <AssemblyVersion>1.1.0.3</AssemblyVersion>
-    <FileVersion>1.1.0.3</FileVersion>
+    <AssemblyVersion>10.0</AssemblyVersion>
+    <FileVersion>10.0</FileVersion>
     <Platforms>AnyCPU;x86</Platforms>
   </PropertyGroup>
 
@@ -87,6 +87,10 @@
 
   <ItemGroup>
     <None Include="Util\LnkHelper.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DesktopIconControl\DesktopIconControl.csproj" />
   </ItemGroup>
 
   <ItemGroup>

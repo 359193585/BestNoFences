@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -16,12 +17,37 @@ namespace Fenceless
         private static Logger logger;
         private static UI.LogViewerForm logViewerForm;
 
+        #region test  code for DPI awareness - may be used in the future if we decide to make the app per-monitor DPI aware
+        [DllImport("user32.dll")]
+        private static extern bool SetProcessDPIAware();
+
+        [DllImport("shcore.dll")]
+        private static extern int SetProcessDpiAwareness(int value);
+
+        // dpi awareness levels
+        private enum DPI_AWARENESS
+        {
+            DPI_AWARENESS_INVALID = -1,
+            DPI_AWARENESS_UNAWARE = 0,
+            DPI_AWARENESS_SYSTEM_AWARE = 1,
+            DPI_AWARENESS_PER_MONITOR_AWARE = 2
+        }
+
+        #endregion
+
+
+
+
+
         /// <summary>
         /// The main entry point for the application.
         /// </summary>
         [STAThread]
         static void Main()
         {
+            // set process DPI awareness to handle high-DPI displays properly. This should be done before any UI is initialized.
+            EnableDPIAwareness();
+
             try
             {
                 // Initialize logging first
@@ -107,7 +133,7 @@ namespace Fenceless
                             var autoSizeRightMentItem = new ToolStripMenuItem("Size Right");
                             autoSizeRightMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceRight();
                             var autoSizeFullMentItem = new ToolStripMenuItem("Size Auto");
-                            autoSizeFullMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFence();
+                            autoSizeFullMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceAuto();
                             var autoSizeHideMentItem = new ToolStripMenuItem("Hide All");
                             //autoSizeHideMentItem.Click += (s, e) => FenceManager.Instance.HideAllFences();
                             autoSizeHideMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceMiniRightBottom();
@@ -244,6 +270,27 @@ namespace Fenceless
             }
         }
 
+        private static void EnableDPIAwareness()
+        {
+            if (Environment.OSVersion.Version.Major >= 6) // Windows Vista or later
+            {
+                try
+                {
+                    // try set per-monitor DPI awareness first
+                    SetProcessDpiAwareness((int)DPI_AWARENESS.DPI_AWARENESS_PER_MONITOR_AWARE);
+                }
+                catch
+                {
+                    try
+                    {
+                        SetProcessDPIAware();
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+        }
         private static void Application_ThreadException(object sender, ThreadExceptionEventArgs e)
         {
             logger.Error("Unhandled thread exception", "Exception", e.Exception);

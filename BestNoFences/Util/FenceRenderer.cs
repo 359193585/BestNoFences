@@ -11,9 +11,9 @@ namespace Fenceless.Util
     public class FenceRenderer
     {
         // Cache fonts to reduce memory overhead
-        private readonly Font titleFont = new Font("Segoe UI", 9, FontStyle.Bold);
-        private readonly Font iconFont = new Font("Segoe UI", 8);
-        private const int shadowDist = 1;
+        private Font titleFont = new Font("Segoe UI", 9, FontStyle.Bold);
+        private Font iconFont = new Font("Segoe UI", 8);
+        private const int shadowDist = 1;// Distance for text shadow
         private readonly FenceInfo _fenceInfo;
         private readonly Logger _logger;
 
@@ -27,6 +27,8 @@ namespace Fenceless.Util
      
         public void Render(FencePaintContext ctx, dynamic providers)
         {
+            titleFont = new Font("Segoe UI", 9f * ctx.dpiScale, FontStyle.Bold);
+            iconFont = new Font("Segoe UI", 8f * ctx.dpiScale);
             var g = ctx.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
@@ -204,7 +206,7 @@ namespace Fenceless.Util
                 using (var sb = new SolidBrush(Color.FromArgb(180, 15, 15, 15)))
                     g.DrawString(name, iconFont, sb, new RectangleF(textRect.X + shadowDist, textRect.Y + shadowDist, textRect.Width, textRect.Height), format);
             }
-
+            
             using (var tb = new SolidBrush(Color.FromArgb((int)(255 * opacity), textColor)))
                 g.DrawString(name, iconFont, tb, textRect, format);
         }

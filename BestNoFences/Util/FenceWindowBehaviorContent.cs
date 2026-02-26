@@ -14,5 +14,6 @@ namespace Fenceless.Util
         public bool IsAutoHidden { get; set; }
         public bool IsDisposed { get; set; }
         public Point  MousePos { get; set; }
+        public bool IsMinified { get; set; }
     }
 }

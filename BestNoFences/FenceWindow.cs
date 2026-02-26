@@ -1,13 +1,16 @@
-﻿using Fenceless.Model;
+﻿using DesktopIconControl;
+using Fenceless.Model;
 using Fenceless.UI;
 using Fenceless.Util;
 using Fenceless.Win32;
 using Peter;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Windows.Forms;
 using static Fenceless.Win32.WindowUtil;
 using FormsTimer = System.Windows.Forms.Timer;
@@ -121,9 +124,7 @@ namespace Fenceless
             Minify();
             logger.Info($"Fence window '{fenceInfo.Name}' created successfully at ({fenceInfo.PosX}, {fenceInfo.PosY})", "FenceWindow");
         }
-
-       
-
+      
         private void SetupEventHandlers()
         {
             removeItemToolStripMenuItem.Click += (sender, e) =>
@@ -931,6 +932,7 @@ namespace Fenceless
 
         private void FenceWindow_Load(object sender, EventArgs e)
         {
+            DesktopIconManager.ArrangeToLeft();
             // Validate items when the fence loads
             var itemsToRemove = _handler.ValidateAndCleanupItems();
             if (itemsToRemove !=null )
@@ -1071,7 +1073,8 @@ namespace Fenceless
                 DraggingItem = draggingItem,
                 IsAutoHidden = isAutoHidden,
                 IsDisposed = IsDisposed,
-                MousePos = PointToClient(MousePosition)
+                MousePos = PointToClient(MousePosition),
+                IsMinified = isMinified
             };
             _behaviorManager.ProcessMessage(ref m, ctx);
         }
@@ -1177,7 +1180,9 @@ namespace Fenceless
                     SelectedItem = selectedItem,
                     HoveringItem = hoveringItem,
                     ShouldUpdateSelection = shouldUpdateSelection,
-                    ShouldRunDoubleClick = shouldRunDoubleClick
+                    ShouldRunDoubleClick = shouldRunDoubleClick,
+
+                    dpiScale = this.DeviceDpi / 96f
                 };
                 var providersObject = new
                 {

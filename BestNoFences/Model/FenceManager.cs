@@ -9,6 +9,7 @@ using System.Linq;
 using System.Windows.Forms;
 using System.Xml.Serialization;
 using static Fenceless.Win32.WindowUtil;
+using DesktopIconControl;
 
 namespace Fenceless.Model
 {
@@ -79,12 +80,17 @@ namespace Fenceless.Model
                 logger.Error("Failed to register global hotkeys", "FenceManager", ex);
             }
         }
-        public void SizeAllFence()
+
+        public void SizeAllFenceAuto()
         {
-            // try move desktop icons arranged to left, but win10/11  not doing it properly
-            DesktopIconManager.ArrangeIconsToLeft();
             // get usable screen area, 
-            Rectangle usableArea = new DesktopIconManager().GetUsableScreenArea();
+            //Rectangle usableArea = new DesktopIconManager().GetUsableScreenArea();
+            Rectangle usableArea = new Rectangle(
+                 x: 15,
+                 y: 15,
+                 width: Screen.PrimaryScreen.WorkingArea.Width - 15,
+                 height: Screen.PrimaryScreen.WorkingArea.Height - 15
+                 );
             SizeAllFence(usableArea);
         }
         public void SizeAllFenceMiniRightBottom()
@@ -116,6 +122,9 @@ namespace Fenceless.Model
         }
         public void SizeAllFence(Rectangle usableArea)
         {
+            // try move desktop icons arranged to right, but win10/11  not doing it properly
+            DesktopIconManager.ArrangeToLeft();
+
             // calculate new layout by number of open forms
             int myFormCount = Application.OpenForms.Count;
             List<Rectangle> layoutResult = FormLayoutCalculator.CalculateLayoutOnPrimaryScreen(myFormCount, usableArea, preferMoreRows: false);
@@ -132,8 +141,6 @@ namespace Fenceless.Model
         }
         public void SizeAllFenceLeft()
         {
-            // try move desktop icons arranged to right, but win10/11  not doing it properly
-            DesktopIconManager.ArrangeIconsToRight();
             // half screen area minus desktop icons area
             Rectangle usableArea = new Rectangle(
                 x: 0,

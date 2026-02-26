@@ -63,39 +63,43 @@ namespace Fenceless.Util
                     m.Result = new IntPtr(HTRIGHT);
                 return true;
             }
-            // new screen resolution
-            if (m.Msg == WM_DISPLAYCHANGE)
+
+            // new screen resolution or dpi changed
+            if (m.Msg == WM_DISPLAYCHANGE || m.Msg == WM_DPICHANGED)
             {
-                int newWidth = (int)m.LParam & 0xFFFF;  // lParam low 16 bits is width
-                int newHeight = (int)m.LParam >> 16;    // lParam high 16 bits is height
-                int colorDepth = (int)m.WParam;         // wParam means color depth
-                FenceManager.Instance.SizeAllFence();
+                FenceManager.Instance.SizeAllFenceAuto();
                 //return true;
             }
-
-            // 处理鼠标按下消息 - 不拦截，让基类处理
+                        
+            // 处理鼠标按下消息 - 不拦截，让基类处理 handle mouse down messages - don't intercept, let the base class handle it
             if (m.Msg == WM_NCLBUTTONDOWN || m.Msg == WM_LBUTTONDOWN)
             {
-                return false;  // 让基类处理
+                return false;  // let the base class handle it
             }
 
-            // 处理鼠标释放消息 - 不拦截，让基类处理
+            // 处理鼠标释放消息 - 不拦截，让基类处理 handle mouse up messages - don't intercept, let the base class handle it
             if (m.Msg == WM_NCLBUTTONUP || m.Msg == WM_LBUTTONUP)
             {
-                return false;  // 让基类处理
+                return false;  // let the base class handle it
             }
 
-            // 处理鼠标移动消息 - 不拦截，让基类处理
+            // 处理鼠标移动消息 - 不拦截，让基类处理 handle mouse move messages - don't intercept, let the base class handle it
             if (m.Msg == WM_NCMOUSEMOVE || m.Msg == WM_MOUSEMOVE)
             {
-                return false;  // 让基类处理
+                return false;  
             }
             // Mouse leave
             var myrect = new Rectangle(new Point(_fenceInfo.PosX, _fenceInfo.PosY), new Size(_fenceInfo.Width,_fenceInfo.Height));
             if (m.Msg == 0x02a2 && !myrect.IntersectsWith(
                 new Rectangle(ctx.MousePos,new Size(1, 1))))
             {
-               // Minify();
+                //if (_targetForm.minifyToolStripMenuItem.Checked && !ctx.IsMinified)
+                //{
+                //    ctx.IsMinified = true;
+                //    prevHeight = Height;
+                //    Height = titleHeight;
+                //    Refresh();
+                //}
             }
 
             // Prevent maximize/minimize
@@ -109,10 +113,10 @@ namespace Fenceless.Util
                 }
                 return false;
             }
-            // 处理键盘消息 - 不拦截
+            // 处理键盘消息 - 不拦截 handle keyboard messages - don't intercept
             if (m.Msg == WM_KEYDOWN || m.Msg == WM_KEYUP)
             {
-                return false;  // 让基类处理
+                return false;  
             }
             // Prevent window from being hidden (Show Desktop)
             if (m.Msg == WM_SHOWWINDOW && m.WParam == IntPtr.Zero)

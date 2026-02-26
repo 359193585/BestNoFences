@@ -35,5 +35,7 @@ namespace Fenceless.Util
         public string NewHoveringItem { get; set; }
         public int NewScrollHeight { get; set; } 
 
+        public float dpiScale { get; set; }
+       
     }
 }
