@@ -54,7 +54,7 @@ namespace Fenceless
                 // Load settings to configure logging properly
                 var settings = AppSettings.Instance;
 
-                logger.Info("####    Fenceless application starting...", "Main");
+                logger.Info("Fenceless application starting...", "Main");
 
 
 
@@ -130,6 +130,8 @@ namespace Fenceless
                             autoSizeCenterMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceCenter();
                             var autoSizeRightMentItem = new ToolStripMenuItem("Size Right");
                             autoSizeRightMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceRight();
+                            var autoSizeTopRightMentItem = new ToolStripMenuItem("Size TopRight");
+                            autoSizeTopRightMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceTopRight();
                             var autoSizeFullMentItem = new ToolStripMenuItem("Size Auto");
                             autoSizeFullMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceAuto();
                             var autoSizeHideMentItem = new ToolStripMenuItem("Hide All");
@@ -140,6 +142,7 @@ namespace Fenceless
                             autoSizeFences.DropDownItems.Add(autoSizeLeftMentItem);
                             autoSizeFences.DropDownItems.Add(autoSizeCenterMentItem);
                             autoSizeFences.DropDownItems.Add(autoSizeRightMentItem);
+                            autoSizeFences.DropDownItems.Add(autoSizeTopRightMentItem);
                             autoSizeFences.DropDownItems.Add(new ToolStripSeparator()); // -----------------
                             autoSizeFences.DropDownItems.Add(autoSizeFullMentItem);
                             autoSizeFences.DropDownItems.Add(autoSizeHideMentItem);

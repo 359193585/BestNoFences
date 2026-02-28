@@ -192,6 +192,16 @@ namespace Fenceless.Model
                 );
             SizeAllFence(usableArea);
         }
+        public void SizeAllFenceTopRight()
+        {
+            Rectangle usableArea = new Rectangle(
+                x: Screen.PrimaryScreen.WorkingArea.Width / 3,
+                y: 0,
+                width: Screen.PrimaryScreen.WorkingArea.Width / 3 * 2 - 20,
+                height: Screen.PrimaryScreen.WorkingArea.Height / 3 * 2
+                );
+            SizeAllFence(usableArea);
+        }
         public void LoadFences()
         {
             try

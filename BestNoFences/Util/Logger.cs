@@ -42,7 +42,7 @@ namespace Fenceless.Util
             _logWriterTask = Task.Run(ProcessLogQueue, _cancellationTokenSource.Token);
 
             // Log startup
-            Info("Logger initialized", "Logger");
+            Info("\n####    Logger initialized", "Logger");
         }
 
         public void Debug(string message, string category = null)
