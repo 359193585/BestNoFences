@@ -10,6 +10,7 @@ using System.Windows.Forms;
 using System.Xml.Serialization;
 using static Fenceless.Win32.WindowUtil;
 using DesktopIconControl;
+using System.Diagnostics;
 
 namespace Fenceless.Model
 {
@@ -25,6 +26,7 @@ namespace Fenceless.Model
         private int showAllFencesHotkeyId = -1;
         private readonly Logger logger;
         private static readonly object _saveLock = new object();
+        private ScreenRegionGenerator _regionGenerator = new ScreenRegionGenerator();
 
         public FenceManager()
         {
@@ -83,15 +85,13 @@ namespace Fenceless.Model
 
         public void SizeAllFenceAuto()
         {
-            // get usable screen area, 
-            //Rectangle usableArea = new DesktopIconManager().GetUsableScreenArea();
-            Rectangle usableArea = new Rectangle(
-                 x: 15,
-                 y: 15,
-                 width: Screen.PrimaryScreen.WorkingArea.Width - 15,
-                 height: Screen.PrimaryScreen.WorkingArea.Height - 15
-                 );
-            SizeAllFence(usableArea);
+            var screen = Screen.PrimaryScreen;
+            var resolution = screen.WorkingArea.Size;
+            string report = _regionGenerator.GetScreenReport(resolution);
+            //Debug.WriteLine(report);
+            var allRegions = _regionGenerator.GenerateAllRegions(resolution);
+            SizeAllFence(allRegions[ScreenRegionGenerator.RegionType.Auto]);
+
         }
         public void SizeAllFenceMiniRightBottom()
         {
@@ -162,45 +162,39 @@ namespace Fenceless.Model
         }
         public void SizeAllFenceLeft()
         {
-            // half screen area minus desktop icons area
-            Rectangle usableArea = new Rectangle(
-                x: 0,
-                y: 0,
-                width: Screen.PrimaryScreen.WorkingArea.Width/2,
-                height: Screen.PrimaryScreen.WorkingArea.Height
-                );
-            SizeAllFence(usableArea);
+            var screen = Screen.PrimaryScreen;
+            var resolution = screen.WorkingArea.Size;
+            string report = _regionGenerator.GetScreenReport(resolution);
+            //Debug.WriteLine(report);
+            var allRegions = _regionGenerator.GenerateAllRegions(resolution);
+            SizeAllFence(allRegions[ScreenRegionGenerator.RegionType.Left]);
         }
         public void SizeAllFenceCenter()
         {
-            Rectangle usableArea = new Rectangle(
-                x: Screen.PrimaryScreen.WorkingArea.Width / 4,
-                y: 0,
-                width: Screen.PrimaryScreen.WorkingArea.Width / 2,
-                height: Screen.PrimaryScreen.WorkingArea.Height
-                );
-            SizeAllFence(usableArea);
+            var screen = Screen.PrimaryScreen;
+            var resolution = screen.WorkingArea.Size;
+            string report = _regionGenerator.GetScreenReport(resolution);
+            //Debug.WriteLine(report);
+            var allRegions = _regionGenerator.GenerateAllRegions(resolution);
+            SizeAllFence(allRegions[ScreenRegionGenerator.RegionType.Center]);
         }
         public void SizeAllFenceRight()
         {
-            // half screen area 
-            Rectangle usableArea = new Rectangle(
-                x: Screen.PrimaryScreen.WorkingArea.Width / 2,
-                y: 0,
-                width: Screen.PrimaryScreen.WorkingArea.Width / 2,
-                height: Screen.PrimaryScreen.WorkingArea.Height
-                );
-            SizeAllFence(usableArea);
+            var screen = Screen.PrimaryScreen;
+            var resolution = screen.WorkingArea.Size;
+            string report = _regionGenerator.GetScreenReport(resolution);
+            //Debug.WriteLine(report);
+            var allRegions = _regionGenerator.GenerateAllRegions(resolution);
+            SizeAllFence(allRegions[ScreenRegionGenerator.RegionType.Right]);
         }
         public void SizeAllFenceTopRight()
         {
-            Rectangle usableArea = new Rectangle(
-                x: Screen.PrimaryScreen.WorkingArea.Width / 3,
-                y: 0,
-                width: Screen.PrimaryScreen.WorkingArea.Width / 3 * 2 - 20,
-                height: Screen.PrimaryScreen.WorkingArea.Height / 3 * 2
-                );
-            SizeAllFence(usableArea);
+            var screen = Screen.PrimaryScreen;
+            var resolution = screen.WorkingArea.Size;
+            string report = _regionGenerator.GetScreenReport(resolution);
+            //Debug.WriteLine(report);
+            var allRegions = _regionGenerator.GenerateAllRegions(resolution);
+            SizeAllFence(allRegions[ScreenRegionGenerator.RegionType.TopRight]);
         }
         public void LoadFences()
         {
