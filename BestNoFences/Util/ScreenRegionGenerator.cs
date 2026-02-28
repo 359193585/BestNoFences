@@ -73,6 +73,11 @@ namespace Fenceless.Util
             float aspectRatio = (float)resolution.Width / resolution.Height;
             int totalPixels = resolution.Width * resolution.Height;
 
+            if (totalPixels <= 1366 * 768)
+                return ScreenType.LowResolution;
+            else if (totalPixels > 3840 * 2160)
+                return ScreenType.HighResolution;
+
             if (aspectRatio < 0.8f)
                 return ScreenType.Portrait;
 
@@ -83,11 +88,6 @@ namespace Fenceless.Util
 
             if (aspectRatio > 0.9f && aspectRatio < 1.1f)
                 return ScreenType.Square;
-
-            if (totalPixels <= 1366 * 768)
-                return ScreenType.LowResolution;
-            else if (totalPixels > 3840 * 2160)
-                return ScreenType.HighResolution;
 
             return ScreenType.Standard;
         }
@@ -179,43 +179,43 @@ namespace Fenceless.Util
             switch (screenType)
             {
                 case ScreenType.LowResolution:
-                    parameters.LeftRightWidth = width * 4 / 5;        // 窄屏用1/3宽度
-                    parameters.CenterWidth = width / 2;           // 中间区域用1/2宽度
-                    parameters.TopBottomHeight = height;      // 顶部/底部高度
-                    parameters.CornerWidth = width * 3 / 5;           // 角落宽度
-                    parameters.CornerHeight = height * 8 / 9;         // 角落高度
+                    parameters.LeftRightWidth = width * 4 / 5;        
+                    parameters.CenterWidth = width * 4 / 5;          
+                    parameters.TopBottomHeight = height;      
+                    parameters.CornerWidth = width * 3 / 5;          
+                    parameters.CornerHeight = height * 8 / 9;       
                     break;
 
                 case ScreenType.UltraWide:
-                    parameters.LeftRightWidth = width * 2 / 3;        // 超宽屏用1/5宽度
-                    parameters.CenterWidth = width * 3 / 5;       // 中间区域用3/5宽度
-                    parameters.TopBottomHeight = height ;      // 顶部/底部高度
-                    parameters.CornerWidth = width * 3 / 5;           // 角落宽度
-                    parameters.CornerHeight = height * 5 / 8;         // 角落高度
+                    parameters.LeftRightWidth = width * 2 / 3; 
+                    parameters.CenterWidth = width * 3 / 5;    
+                    parameters.TopBottomHeight = height ;      
+                    parameters.CornerWidth = width * 3 / 5;    
+                    parameters.CornerHeight = height * 5 / 8;  
                     break;
 
                 case ScreenType.Wide:
-                    parameters.LeftRightWidth = width * 3 / 4;        // 宽屏用1/4宽度
-                    parameters.CenterWidth = width / 2;           // 中间区域用1/2宽度
-                    parameters.TopBottomHeight = height;      // 顶部/底部高度
-                    parameters.CornerWidth = width * 3 / 5;           // 角落宽度
-                    parameters.CornerHeight = height * 5 / 8;         // 角落高度
+                    parameters.LeftRightWidth = width * 3 / 4;
+                    parameters.CenterWidth = width / 2;       
+                    parameters.TopBottomHeight = height;      
+                    parameters.CornerWidth = width * 3 / 5;   
+                    parameters.CornerHeight = height * 5 / 8; 
                     break;
 
                 case ScreenType.Portrait:
-                    parameters.LeftRightWidth = width * 2 / 5;    // 竖屏左右区域较宽
-                    parameters.CenterWidth = width * 3 / 5;       // 中间区域
-                    parameters.TopBottomHeight = height;      // 顶部/底部高度
-                    parameters.CornerWidth = width * 3 / 5;           // 角落宽度
-                    parameters.CornerHeight = height * 5 / 8;         // 角落高度
+                    parameters.LeftRightWidth = width * 2 / 5;
+                    parameters.CenterWidth = width * 3 / 5;   
+                    parameters.TopBottomHeight = height;      
+                    parameters.CornerWidth = width * 3 / 5;   
+                    parameters.CornerHeight = height * 5 / 8; 
                     break;
 
                 default: // Standard, HighResolution, Square
-                    parameters.LeftRightWidth = width * 2 / 3;        // 标准屏用1/4宽度
-                    parameters.CenterWidth = width / 2;           // 中间区域用1/2宽度
-                    parameters.TopBottomHeight = height ;      // 顶部/底部高度
-                    parameters.CornerWidth = width * 3 / 5;           // 角落宽度
-                    parameters.CornerHeight = height * 8 / 9;         // 角落高度
+                    parameters.LeftRightWidth = width * 2 / 3;
+                    parameters.CenterWidth = width / 2;       
+                    parameters.TopBottomHeight = height ;     
+                    parameters.CornerWidth = width * 3 / 5;   
+                    parameters.CornerHeight = height * 8 / 9; 
                     break;
             }
 

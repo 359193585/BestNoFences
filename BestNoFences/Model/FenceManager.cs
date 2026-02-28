@@ -88,9 +88,9 @@ namespace Fenceless.Model
             var screen = Screen.PrimaryScreen;
             var resolution = screen.WorkingArea.Size;
             string report = _regionGenerator.GetScreenReport(resolution);
-            //Debug.WriteLine(report);
             var allRegions = _regionGenerator.GenerateAllRegions(resolution);
             SizeAllFence(allRegions[ScreenRegionGenerator.RegionType.Auto]);
+            logger.Debug($"{report}", "FenceManager");
 
         }
         public void SizeAllFenceMiniRightBottom()
@@ -165,7 +165,6 @@ namespace Fenceless.Model
             var screen = Screen.PrimaryScreen;
             var resolution = screen.WorkingArea.Size;
             string report = _regionGenerator.GetScreenReport(resolution);
-            //Debug.WriteLine(report);
             var allRegions = _regionGenerator.GenerateAllRegions(resolution);
             SizeAllFence(allRegions[ScreenRegionGenerator.RegionType.Left]);
         }
@@ -174,7 +173,6 @@ namespace Fenceless.Model
             var screen = Screen.PrimaryScreen;
             var resolution = screen.WorkingArea.Size;
             string report = _regionGenerator.GetScreenReport(resolution);
-            //Debug.WriteLine(report);
             var allRegions = _regionGenerator.GenerateAllRegions(resolution);
             SizeAllFence(allRegions[ScreenRegionGenerator.RegionType.Center]);
         }
@@ -183,7 +181,6 @@ namespace Fenceless.Model
             var screen = Screen.PrimaryScreen;
             var resolution = screen.WorkingArea.Size;
             string report = _regionGenerator.GetScreenReport(resolution);
-            //Debug.WriteLine(report);
             var allRegions = _regionGenerator.GenerateAllRegions(resolution);
             SizeAllFence(allRegions[ScreenRegionGenerator.RegionType.Right]);
         }
@@ -192,7 +189,6 @@ namespace Fenceless.Model
             var screen = Screen.PrimaryScreen;
             var resolution = screen.WorkingArea.Size;
             string report = _regionGenerator.GetScreenReport(resolution);
-            //Debug.WriteLine(report);
             var allRegions = _regionGenerator.GenerateAllRegions(resolution);
             SizeAllFence(allRegions[ScreenRegionGenerator.RegionType.TopRight]);
         }
