@@ -139,6 +139,27 @@ namespace Fenceless.Model
                 kk++;
             }
         }
+        public void CloseAllFences()
+        {
+            try
+            {
+                logger.Info("Quitting all fences", "FenceManager");
+                foreach (Form f in Application.OpenForms)
+                {
+                    try
+                    {
+                        f.Close();
+
+                    }
+                    catch { }
+                }
+                logger.Info($"Quit {activeFences.Count} fence(s)", "FenceManager");
+            }
+            catch (Exception ex)
+            {
+                logger.Error("Failed to quit all fences", "FenceManager", ex);
+            }
+        }
         public void SizeAllFenceLeft()
         {
             // half screen area minus desktop icons area

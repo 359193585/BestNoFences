@@ -1066,14 +1066,29 @@ namespace Fenceless
         #region protected override methods
         protected override void WndProc(ref Message m)
         {
+            if (this.IsDisposed)
+            {
+                base.WndProc(ref m);
+                return;
+            }
             base.WndProc(ref m);
+            Point mousePos = Point.Empty;
+            try
+            {
+                mousePos = this.PointToClient(Control.MousePosition);
+            }
+            catch (ObjectDisposedException)
+            {
+                base.WndProc(ref m);
+                return;
+            }
             var ctx = new FenceWindowBehaviorContent
             {
                 IsDraggingItem = isDraggingItem,
                 DraggingItem = draggingItem,
                 IsAutoHidden = isAutoHidden,
                 IsDisposed = IsDisposed,
-                MousePos = PointToClient(MousePosition),
+                MousePos = mousePos,
                 IsMinified = isMinified
             };
             _behaviorManager.ProcessMessage(ref m, ctx);

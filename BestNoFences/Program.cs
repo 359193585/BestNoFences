@@ -1,6 +1,7 @@
 using Fenceless.Model;
 using Fenceless.Util;
 using Fenceless.Win32;
+using Microsoft.Win32;
 using System;
 using System.Diagnostics;
 using System.Drawing;
@@ -35,10 +36,6 @@ namespace Fenceless
 
         #endregion
 
-
-
-
-
         /// <summary>
         /// The main entry point for the application.
         /// </summary>
@@ -48,6 +45,11 @@ namespace Fenceless
             // set process DPI awareness to handle high-DPI displays properly. This should be done before any UI is initialized.
             EnableDPIAwareness();
 
+            // subscribe to session ending event to handle system shutdown/logoff
+            SystemEvents.SessionEnding += OnSessionEnding;
+
+            // subscribe to process exit event to ensure we can perform cleanup even if the application is closed in a non-standard way
+            AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
             try
             {
                 // Initialize logging first
@@ -262,14 +264,34 @@ namespace Fenceless
             {
                 if (logger != null)
                     logger.Critical("Critical error in main application", "Main", ex);
-                else
-                    Debug.WriteLine($"Critical error: {ex}");
-
-                MessageBox.Show($"Critical application error: {ex.Message}\n\nPlease check the log files for more details.", "Critical Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                
             }
         }
+        /// <summary>
+        /// system session ending event handler to perform quick cleanup without trying to cancel shutdown, which can lead to a better user experience during system shutdown/logoff
+        /// </summary>
+        private static void OnSessionEnding(object sender, SessionEndingEventArgs e)
+        {
+            QuickCleanup();
+            e.Cancel = false;
+        }
 
+        /// <summary>
+        /// process exit event handler to ensure cleanup is performed even if the application is closed in a non-standard way (e.g. via Task Manager). This is a last resort to try to save data and clean up resources, but it may not always execute depending on how the process is terminated, so we should not rely on it for critical cleanup tasks. The SessionEnding event should be used for handling system shutdown/logoff scenarios instead.
+        /// </summary>
+        private static void OnProcessExit(object sender, EventArgs e)
+        {
+            QuickCleanup();
+            SystemEvents.SessionEnding -= OnSessionEnding;
+            AppDomain.CurrentDomain.ProcessExit -= OnProcessExit;
+        }
+        private static void QuickCleanup()
+        {
+            FenceManager.Instance.CloseAllFences();
+            //AppSettings.Instance.SaveSettings();
+            //FenceManager.Instance.Dispose();
+            logger.Info("Quick cleanup completed during session ending/process exit", "Main");
+        }
         private static void EnableDPIAwareness()
         {
             if (Environment.OSVersion.Version.Major >= 6) // Windows Vista or later
