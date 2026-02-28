@@ -173,5 +173,6 @@ namespace Fenceless.Util
                 return combinedPath;
             }
             return Assembly.GetExecutingAssembly().Location;
+        }
     }
 }
