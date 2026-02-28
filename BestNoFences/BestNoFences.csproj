@@ -36,9 +36,10 @@
 	<SelfContained>true</SelfContained>
 
 
-	  <FileVersion>1.2.0.0</FileVersion>
-	  <AssemblyVersion>1.2.0.0</AssemblyVersion>
-	  <InformationalVersion>1.2.0.0</InformationalVersion>
+	  <Version>1.2.1.0</Version>
+	  <FileVersion>$(Version)</FileVersion>
+	  <AssemblyVersion>$(Version)</AssemblyVersion>
+	  <InformationalVersion>$(Version)</InformationalVersion>
 	  
 	  <Deterministic>true</Deterministic>
 	  <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
@@ -127,5 +128,42 @@
 		<Message Importance="high" Text="start auto publish..." />
 		<Exec Command="dotnet publish -c Release --no-build -p:Deterministic=true" />
 	</Target>
+
+
+
+
+
+	<!-- auto zip exe files -->
+	<Target Name="ZipPublishedFiles" AfterTargets="AutoPublishOnReleaseBuild" Condition=" '$(Configuration)' == 'Release' ">
+		<Message Importance="high" Text="begin zip file..." />
+
+		<PropertyGroup>
+			<CurrentVersion Condition="'$(Version)' == ''">1.0.0.0</CurrentVersion>
+			<CurrentVersion Condition="'$(Version)' != ''">$(Version)</CurrentVersion>
+
+			<PublishOutputDir>$(MSBuildProjectDirectory)\bin\release\BestFences_single</PublishOutputDir>
+
+			<ZipFileName>BestFences_single_V$(CurrentVersion).zip</ZipFileName>
+			<ZipFilePath>$(MSBuildProjectDirectory)\bin\release\$(ZipFileName)</ZipFilePath>
+		</PropertyGroup>
+
+		<Message Importance="high" Text="check publish path: $(PublishOutputDir)" />
+		<Message Condition="Exists($(PublishOutputDir))" Importance="high" Text="path exist,ver: $(CurrentVersion)" />
+		<Warning Condition="!Exists($(PublishOutputDir))" Text="path not exist: $(PublishOutputDir)" />
+
+		<ItemGroup>
+			<FilesToZip Include="$(PublishOutputDir)\**\*.*" />
+		</ItemGroup>
+
+		<ZipDirectory
+		  Condition="Exists($(PublishOutputDir))"
+		  SourceDirectory="$(PublishOutputDir)"
+		  DestinationFile="$(ZipFilePath)"
+		  Overwrite="true" />
+
+		<Message Condition="Exists($(ZipFilePath))" Importance="high" Text="end zipped: $(ZipFilePath)" />
+		<Warning Condition="!Exists($(ZipFilePath))" Text="failed zippde: $(ZipFilePath)" />
+	</Target>
+	
 	
 </Project>
