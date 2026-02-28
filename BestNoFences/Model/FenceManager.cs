@@ -85,14 +85,40 @@ namespace Fenceless.Model
 
         public void SizeAllFenceAuto()
         {
+            Dictionary<ScreenRegionGenerator.RegionType, Rectangle> allRegions = GetScreenReport();
+            SizeAllFence(allRegions[ScreenRegionGenerator.RegionType.Auto]);
+        }
+        public void SizeAllFenceLeft()
+        {
+            Dictionary<ScreenRegionGenerator.RegionType, Rectangle> allRegions = GetScreenReport();
+            SizeAllFence(allRegions[ScreenRegionGenerator.RegionType.Left]);
+        }
+        public void SizeAllFenceCenter()
+        {
+            Dictionary<ScreenRegionGenerator.RegionType, Rectangle> allRegions = GetScreenReport();
+            SizeAllFence(allRegions[ScreenRegionGenerator.RegionType.Center]);
+        }
+        public void SizeAllFenceRight()
+        {
+            Dictionary<ScreenRegionGenerator.RegionType, Rectangle> allRegions = GetScreenReport();
+            SizeAllFence(allRegions[ScreenRegionGenerator.RegionType.Right]);
+        }
+        public void SizeAllFenceTopRight()
+        {
+            Dictionary<ScreenRegionGenerator.RegionType, Rectangle> allRegions = GetScreenReport();
+            SizeAllFence(allRegions[ScreenRegionGenerator.RegionType.TopRight]);
+        }
+        private Dictionary<ScreenRegionGenerator.RegionType, Rectangle> GetScreenReport()
+        {
             var screen = Screen.PrimaryScreen;
             var resolution = screen.WorkingArea.Size;
             string report = _regionGenerator.GetScreenReport(resolution);
-            var allRegions = _regionGenerator.GenerateAllRegions(resolution);
-            SizeAllFence(allRegions[ScreenRegionGenerator.RegionType.Auto]);
+            Dictionary<ScreenRegionGenerator.RegionType, Rectangle> allRegions = _regionGenerator.GenerateAllRegions(resolution);
             logger.Debug($"{report}", "FenceManager");
+            return allRegions;
 
         }
+
         public void SizeAllFenceMiniRightBottom()
         {
             // get usable screen area, 
@@ -160,38 +186,7 @@ namespace Fenceless.Model
                 logger.Error("Failed to quit all fences", "FenceManager", ex);
             }
         }
-        public void SizeAllFenceLeft()
-        {
-            var screen = Screen.PrimaryScreen;
-            var resolution = screen.WorkingArea.Size;
-            string report = _regionGenerator.GetScreenReport(resolution);
-            var allRegions = _regionGenerator.GenerateAllRegions(resolution);
-            SizeAllFence(allRegions[ScreenRegionGenerator.RegionType.Left]);
-        }
-        public void SizeAllFenceCenter()
-        {
-            var screen = Screen.PrimaryScreen;
-            var resolution = screen.WorkingArea.Size;
-            string report = _regionGenerator.GetScreenReport(resolution);
-            var allRegions = _regionGenerator.GenerateAllRegions(resolution);
-            SizeAllFence(allRegions[ScreenRegionGenerator.RegionType.Center]);
-        }
-        public void SizeAllFenceRight()
-        {
-            var screen = Screen.PrimaryScreen;
-            var resolution = screen.WorkingArea.Size;
-            string report = _regionGenerator.GetScreenReport(resolution);
-            var allRegions = _regionGenerator.GenerateAllRegions(resolution);
-            SizeAllFence(allRegions[ScreenRegionGenerator.RegionType.Right]);
-        }
-        public void SizeAllFenceTopRight()
-        {
-            var screen = Screen.PrimaryScreen;
-            var resolution = screen.WorkingArea.Size;
-            string report = _regionGenerator.GetScreenReport(resolution);
-            var allRegions = _regionGenerator.GenerateAllRegions(resolution);
-            SizeAllFence(allRegions[ScreenRegionGenerator.RegionType.TopRight]);
-        }
+    
         public void LoadFences()
         {
             try

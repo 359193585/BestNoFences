@@ -55,7 +55,7 @@ namespace Fenceless.Util
         /// <summary>
         /// Validates if a path is safe to use
         /// </summary>
-        public static bool IsPathSafe(string path)
+        private static bool IsPathSafe(string path)
         {
             if (string.IsNullOrWhiteSpace(path))
                 return false;
