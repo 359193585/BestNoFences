@@ -220,7 +220,8 @@ namespace Fenceless
             if (!isAutoHidden)
             {
                 isAutoHidden = true;
-                this.Opacity = 0.1; // Nearly invisible but still responsive to mouse
+                // <0.004 can not responsive to mouse
+                this.Opacity = 0.0; // Nearly invisible but still responsive to mouse
             }
         }
 

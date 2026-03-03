@@ -146,6 +146,22 @@ namespace Fenceless.Model
                 logger.Error("Failed to hide all fences", "FenceManager", ex);
             }
         }
+        public void ShowAllFence()
+        {
+            try
+            {
+                logger.Info("Hiding all fences", "FenceManager");
+                foreach (var fence in activeFences.ToList())
+                {
+                    fence.ForceShow();
+                }
+                logger.Info($"Show {activeFences.Count} fence(s)", "FenceManager");
+            }
+            catch (Exception ex)
+            {
+                logger.Error("Failed to show all fences", "FenceManager", ex);
+            }
+        }
         public void SizeAllFence(Rectangle usableArea)
         {
             // try move desktop icons arranged to right, but win10/11  not doing it properly

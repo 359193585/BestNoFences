@@ -92,131 +92,8 @@ namespace Fenceless
                             trayIcon.Visible = true;
                             trayIcon.Text = "Fenceless - Desktop organization tool v" + currentVersion;
 
-                            var contextMenu = new ContextMenuStrip();
-                            #region Init right-click pop-up menus for taskbar icon
+                            ContextMenuStrip contextMenu = createTrayIconContextMenu(trayIcon);
 
-                            // Add Fence menu item with sub menu for fence type
-                            var addFenceMenuItem = new ToolStripMenuItem("Add Fence");
-
-                            var normalFenceMenuItem = new ToolStripMenuItem("Normal Fence");
-                            normalFenceMenuItem.Click += (s, e) =>
-                            {
-                                logger.Info("Add Normal Fence requested from tray menu", "Main");
-                                FenceManager.Instance.CreateFence("New Fence");
-                            };
-
-                            addFenceMenuItem.DropDownItems.Add(normalFenceMenuItem);
-
-                            contextMenu.Items.Add(addFenceMenuItem);
-
-                            // Add Log Viewer menu item
-                            var logViewerMenuItem = new ToolStripMenuItem("View Logs");
-                            logViewerMenuItem.Click += (s, e) => ShowLogViewer();
-                            contextMenu.Items.Add(logViewerMenuItem);
-
-                            // Add Settings menu item
-                            var settingsMenuItem = new ToolStripMenuItem("Settings");
-                            settingsMenuItem.Click += (s, e) => FenceManager.Instance.ShowGlobalSettings();
-                            contextMenu.Items.Add(settingsMenuItem);
-
-                            contextMenu.Items.Add(new ToolStripSeparator()); // -----------------
-
-                            // Add auto size menu item with sub ment
-                            var autoSizeFences = new ToolStripMenuItem("Fences Size");
-
-                            var autoSizeLeftMentItem = new ToolStripMenuItem("Size Left");
-                            autoSizeLeftMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceLeft();
-                            var autoSizeCenterMentItem = new ToolStripMenuItem("Size Center");
-                            autoSizeCenterMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceCenter();
-                            var autoSizeRightMentItem = new ToolStripMenuItem("Size Right");
-                            autoSizeRightMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceRight();
-                            var autoSizeTopRightMentItem = new ToolStripMenuItem("Size TopRight");
-                            autoSizeTopRightMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceTopRight();
-                            var autoSizeFullMentItem = new ToolStripMenuItem("Size Auto");
-                            autoSizeFullMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceAuto();
-                            var autoSizeHideMentItem = new ToolStripMenuItem("Hide All");
-                            //autoSizeHideMentItem.Click += (s, e) => FenceManager.Instance.HideAllFences();
-                            autoSizeHideMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceMiniRightBottom();
-
-
-                            autoSizeFences.DropDownItems.Add(autoSizeLeftMentItem);
-                            autoSizeFences.DropDownItems.Add(autoSizeCenterMentItem);
-                            autoSizeFences.DropDownItems.Add(autoSizeRightMentItem);
-                            autoSizeFences.DropDownItems.Add(autoSizeTopRightMentItem);
-                            autoSizeFences.DropDownItems.Add(new ToolStripSeparator()); // -----------------
-                            autoSizeFences.DropDownItems.Add(autoSizeFullMentItem);
-                            autoSizeFences.DropDownItems.Add(autoSizeHideMentItem);
-
-                            contextMenu.Items.Add(autoSizeFences);
-                            contextMenu.Items.Add(new ToolStripSeparator()); // -----------------
-
-                            // Add Start with Windows checkbox
-                            var startWithWindowsMenuItem = new ToolStripMenuItem("Start with Windows");
-                            startWithWindowsMenuItem.CheckOnClick = true;
-
-                            // Sync the setting with actual registry state at startup
-                            bool actualStartupState = Util.StartupManager.IsStartupEnabled();
-                            var appSettings = AppSettings.Instance;
-                            if (appSettings.StartWithWindows != actualStartupState)
-                            {
-                                logger.Info($"Syncing startup setting - Registry: {actualStartupState}, Settings: {appSettings.StartWithWindows}", "Main");
-                                appSettings.StartWithWindows = actualStartupState;
-                                appSettings.SaveSettings();
-                            }
-                            startWithWindowsMenuItem.Checked = actualStartupState;
-                            startWithWindowsMenuItem.CheckedChanged += (s, e) =>
-                            {
-                                logger.Debug($"Start with Windows toggled: {startWithWindowsMenuItem.Checked}", "Main");
-                                var appSettings = AppSettings.Instance;
-                                appSettings.StartWithWindows = startWithWindowsMenuItem.Checked;
-
-                                if (startWithWindowsMenuItem.Checked)
-                                {
-                                    if (!Util.StartupManager.EnableStartup())
-                                    {
-                                        logger.Error("Failed to enable startup", "Main");
-                                        MessageBox.Show("Failed to enable startup with Windows. Please check the logs for details.",
-                                            "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                        startWithWindowsMenuItem.Checked = false;
-                                        appSettings.StartWithWindows = false;
-                                    }
-                                    else
-                                    {
-                                        logger.Info("Startup with Windows enabled", "Main");
-                                    }
-                                }
-                                else
-                                {
-                                    if (!Util.StartupManager.DisableStartup())
-                                    {
-                                        logger.Error("Failed to disable startup", "Main");
-                                        MessageBox.Show("Failed to disable startup with Windows. Please check the logs for details.",
-                                            "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                        startWithWindowsMenuItem.Checked = true;
-                                        appSettings.StartWithWindows = true;
-                                    }
-                                    else
-                                    {
-                                        logger.Info("Startup with Windows disabled", "Main");
-                                    }
-                                }
-
-                                appSettings.SaveSettings();
-                            };
-                            contextMenu.Items.Add(startWithWindowsMenuItem);
-
-
-                            contextMenu.Items.Add(new ToolStripSeparator());
-
-                            var exitMenuItem = new ToolStripMenuItem("Exit");
-                            exitMenuItem.Click += (s, e) =>
-                            {
-                                logger.Info("Exit requested from tray menu", "Main");
-                                trayIcon.Visible = false;
-                                Application.Exit();
-                            };
-                            contextMenu.Items.Add(exitMenuItem);
-                            #endregion
                             trayIcon.ContextMenuStrip = contextMenu;
 
                             trayIcon.DoubleClick += (s, e) =>
@@ -266,7 +143,141 @@ namespace Fenceless
                 
             }
         }
-       
+
+        private static ContextMenuStrip createTrayIconContextMenu(NotifyIcon trayIcon)
+        {
+            #region Init right-click pop-up menus for tray icon
+
+            #endregion
+            var contextMenu = new ContextMenuStrip();
+
+            // Add Fence menu item with sub menu for fence type
+            var addFenceMenuItem = new ToolStripMenuItem("Add Fence");
+
+            var normalFenceMenuItem = new ToolStripMenuItem("Normal Fence");
+            normalFenceMenuItem.Click += (s, e) =>
+            {
+                logger.Info("Add Normal Fence requested from tray menu", "Main");
+                FenceManager.Instance.CreateFence("New Fence");
+            };
+
+            addFenceMenuItem.DropDownItems.Add(normalFenceMenuItem);
+
+            contextMenu.Items.Add(addFenceMenuItem);
+
+            // Add Log Viewer menu item
+            var logViewerMenuItem = new ToolStripMenuItem("View Logs");
+            logViewerMenuItem.Click += (s, e) => ShowLogViewer();
+            contextMenu.Items.Add(logViewerMenuItem);
+
+            // Add Settings menu item
+            var settingsMenuItem = new ToolStripMenuItem("Settings");
+            settingsMenuItem.Click += (s, e) => FenceManager.Instance.ShowGlobalSettings();
+            contextMenu.Items.Add(settingsMenuItem);
+
+            contextMenu.Items.Add(new ToolStripSeparator()); // -----------------
+
+            // Add auto size menu item with sub ment
+            var autoSizeFences = new ToolStripMenuItem("Fences Size");
+
+            var autoSizeLeftMentItem = new ToolStripMenuItem("Size Left");
+            autoSizeLeftMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceLeft();
+            var autoSizeCenterMentItem = new ToolStripMenuItem("Size Center");
+            autoSizeCenterMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceCenter();
+            var autoSizeRightMentItem = new ToolStripMenuItem("Size Right");
+            autoSizeRightMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceRight();
+            var autoSizeTopRightMentItem = new ToolStripMenuItem("Size TopRight");
+            autoSizeTopRightMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceTopRight();
+            var autoSizeFullMentItem = new ToolStripMenuItem("Size Auto");
+            autoSizeFullMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceAuto();
+            var autoSizeHideMentItem = new ToolStripMenuItem("Hide All");
+            autoSizeHideMentItem.Click += (s, e) => FenceManager.Instance.HideAllFences();
+            //autoSizeHideMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceMiniRightBottom();
+            var autoSizeShowMentItem = new ToolStripMenuItem("Show All");
+            autoSizeShowMentItem.Click += (s, e) => FenceManager.Instance.ShowAllFence();
+
+
+            autoSizeFences.DropDownItems.Add(autoSizeLeftMentItem);
+            autoSizeFences.DropDownItems.Add(autoSizeCenterMentItem);
+            autoSizeFences.DropDownItems.Add(autoSizeRightMentItem);
+            autoSizeFences.DropDownItems.Add(autoSizeTopRightMentItem);
+            autoSizeFences.DropDownItems.Add(new ToolStripSeparator()); // -----------------
+            autoSizeFences.DropDownItems.Add(autoSizeFullMentItem);
+            autoSizeFences.DropDownItems.Add(autoSizeHideMentItem);
+            autoSizeFences.DropDownItems.Add(autoSizeShowMentItem);
+
+            contextMenu.Items.Add(autoSizeFences);
+            contextMenu.Items.Add(new ToolStripSeparator()); // -----------------
+
+            // Add Start with Windows checkbox
+            var startWithWindowsMenuItem = new ToolStripMenuItem("Start with Windows");
+            startWithWindowsMenuItem.CheckOnClick = true;
+
+            // Sync the setting with actual registry state at startup
+            bool actualStartupState = Util.StartupManager.IsStartupEnabled();
+            var appSettings = AppSettings.Instance;
+            if (appSettings.StartWithWindows != actualStartupState)
+            {
+                logger.Info($"Syncing startup setting - Registry: {actualStartupState}, Settings: {appSettings.StartWithWindows}", "Main");
+                appSettings.StartWithWindows = actualStartupState;
+                appSettings.SaveSettings();
+            }
+            startWithWindowsMenuItem.Checked = actualStartupState;
+            startWithWindowsMenuItem.CheckedChanged += (s, e) =>
+            {
+                logger.Debug($"Start with Windows toggled: {startWithWindowsMenuItem.Checked}", "Main");
+                var appSettings = AppSettings.Instance;
+                appSettings.StartWithWindows = startWithWindowsMenuItem.Checked;
+
+                if (startWithWindowsMenuItem.Checked)
+                {
+                    if (!Util.StartupManager.EnableStartup())
+                    {
+                        logger.Error("Failed to enable startup", "Main");
+                        MessageBox.Show("Failed to enable startup with Windows. Please check the logs for details.",
+                            "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        startWithWindowsMenuItem.Checked = false;
+                        appSettings.StartWithWindows = false;
+                    }
+                    else
+                    {
+                        logger.Info("Startup with Windows enabled", "Main");
+                    }
+                }
+                else
+                {
+                    if (!Util.StartupManager.DisableStartup())
+                    {
+                        logger.Error("Failed to disable startup", "Main");
+                        MessageBox.Show("Failed to disable startup with Windows. Please check the logs for details.",
+                            "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        startWithWindowsMenuItem.Checked = true;
+                        appSettings.StartWithWindows = true;
+                    }
+                    else
+                    {
+                        logger.Info("Startup with Windows disabled", "Main");
+                    }
+                }
+
+                appSettings.SaveSettings();
+            };
+            contextMenu.Items.Add(startWithWindowsMenuItem);
+
+
+            contextMenu.Items.Add(new ToolStripSeparator());
+
+            var exitMenuItem = new ToolStripMenuItem("Exit");
+            exitMenuItem.Click += (s, e) =>
+            {
+                logger.Info("Exit requested from tray menu", "Main");
+                trayIcon.Visible = false;
+                Application.Exit();
+            };
+            contextMenu.Items.Add(exitMenuItem);
+            return contextMenu;
+        }
+
         private static void EnableDPIAwareness()
         {
             if (Environment.OSVersion.Version.Major >= 6) // Windows Vista or later
