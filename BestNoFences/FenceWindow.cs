@@ -5,13 +5,8 @@ using Fenceless.Util;
 using Fenceless.Win32;
 using Peter;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.IO;
-using System.Reflection.Metadata;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Windows.Forms;
 using static Fenceless.Win32.WindowUtil;
 using FormsTimer = System.Windows.Forms.Timer;
@@ -80,9 +75,6 @@ namespace Fenceless
         {
             _fenceInfo = fenceInfo;
             _behaviorManager = new FenceWindowBehavior(this, _fenceInfo);
-#if DEBUG
-           // IsDebugDnD = true;
-#endif
 
             logger = Logger.Instance;
             logger.Debug($"Creating fence window for '{fenceInfo.Name}'", "FenceWindow");
@@ -531,7 +523,7 @@ namespace Fenceless
                     draggingItem = targetPath;
                     selectedItem = targetPath;
                 }
-                else if (action == ClickActionResult.DragForm)
+                else if (action == ClickActionResult.DragForm && !lockedToolStripMenuItem.Checked)
                 {
                     this.Cursor = Cursors.Default;
                     _isFormDrag = true;
@@ -1089,7 +1081,10 @@ namespace Fenceless
                 IsAutoHidden = isAutoHidden,
                 IsDisposed = IsDisposed,
                 MousePos = mousePos,
-                IsMinified = isMinified
+                IsMinified = isMinified,
+                MinifyToolStripMenuItem = minifyToolStripMenuItem.Checked,
+                TitleHeight = titleHeight,
+                PrevHeight = prevHeight,
             };
             base.WndProc(ref m);
             bool handled = _behaviorManager.ProcessMessage(ref m, ctx);

@@ -11,23 +11,13 @@ namespace Fenceless.Util
     {
         private readonly Form _targetForm;
         private readonly FenceInfo _fenceInfo;
-        private bool _isDebugMode = false;
 
         public FenceWindowBehavior(Form form,FenceInfo fenceInfo)
         {
             _targetForm = form;
             _fenceInfo = fenceInfo;
         }
-        public void ApplyStyles(bool isDebugMode)
-        {
-            _isDebugMode = isDebugMode;
-            if (isDebugMode)
-            {
-                _targetForm.Opacity = 1.0;
-                return;
-            }
-
-        }
+     
         /// <summary>
         /// handle windos message
         /// </summary>
@@ -40,6 +30,12 @@ namespace Fenceless.Util
             {
                 case WM_NCHITTEST:
                     return ProcessHitTest(ref m, ctx);
+
+                case WM_DISPLAYCHANGE:
+                    return ProcessDisplayChange(ref m, ctx);
+
+                case WM_DPICHANGED:
+                    return ProcessDisplayChange(ref m, ctx);
 
                 case WM_SYSCOMMAND:
                     return ProcessSysCommand(ref m, ctx);
@@ -56,15 +52,6 @@ namespace Fenceless.Util
                 case WM_SETFOCUS:
                     return ProcessSetFocus(ref m, ctx);
 
-                case WM_DISPLAYCHANGE:
-                    return ProcessDisplayChange(ref m, ctx);
-
-                case WM_DPICHANGED:
-                    return ProcessDisplayChange(ref m, ctx);
-
-                case WM_NCMOUSELEAVE:
-                    return ProcessNcMouseLeave(ref m, ctx);
-
                 default:
                     return false; // other mesg, let the base class handle
             }
@@ -78,6 +65,7 @@ namespace Fenceless.Util
                 m.Result = (IntPtr)HTCLIENT;
                 return false;
             }
+            if (_fenceInfo.Locked) return false;
             // Allow dragging and resizing
             var pt = _targetForm.PointToClient(new Point(m.LParam.ToInt32()));
             int borderSize = 10;
@@ -159,19 +147,7 @@ namespace Fenceless.Util
             FenceManager.Instance.SizeAllFenceCenter();
             return false; 
         }
-        private bool ProcessNcMouseLeave(ref Message m, FenceWindowBehaviorContent ctx)
-        {
-            var myrect = new Rectangle(new Point(_fenceInfo.PosX, _fenceInfo.PosY),
-                new Size(_fenceInfo.Width, _fenceInfo.Height));
-
-            if (!myrect.IntersectsWith(new Rectangle(ctx.MousePos, new Size(1, 1))))
-            {
-                // Minify();
-            }
-
-            return false; // let the base class handle mouse leave
-
-        }
+       
         #endregion
 
     }

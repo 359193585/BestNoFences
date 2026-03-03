@@ -15,5 +15,8 @@ namespace Fenceless.Util
         public bool IsDisposed { get; set; }
         public Point  MousePos { get; set; }
         public bool IsMinified { get; set; }
+        public bool MinifyToolStripMenuItem { get; set; }
+        public int TitleHeight { get; set; }
+        public int PrevHeight { get; set; }
     }
 }
