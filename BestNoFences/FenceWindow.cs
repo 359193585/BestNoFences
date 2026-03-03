@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
@@ -1071,7 +1072,6 @@ namespace Fenceless
                 base.WndProc(ref m);
                 return;
             }
-            base.WndProc(ref m);
             Point mousePos = Point.Empty;
             try
             {
@@ -1091,7 +1091,9 @@ namespace Fenceless
                 MousePos = mousePos,
                 IsMinified = isMinified
             };
-            _behaviorManager.ProcessMessage(ref m, ctx);
+            base.WndProc(ref m);
+            bool handled = _behaviorManager.ProcessMessage(ref m, ctx);
+            //if(!handled) base.WndProc(ref m);
         }
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {

@@ -1,7 +1,6 @@
 ﻿using Fenceless.Model;
 using System;
 using System.Drawing;
-using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using static Fenceless.Win32.WindowUtil;
@@ -29,167 +28,151 @@ namespace Fenceless.Util
             }
 
         }
-        public bool ProcessMessage( ref Message m, FenceWindowBehaviorContent ctx)
+        /// <summary>
+        /// handle windos message
+        /// </summary>
+        /// <returns>true: do not call base.WndProc; false: need call base.WnProc</returns>
+        public bool ProcessMessage(ref Message m, FenceWindowBehaviorContent ctx)
         {
-            if (ctx == null ) return false;
+            if (ctx == null) return false;
 
-            // Then, allow dragging and resizing
-            // If you comment out this section of code, it is easy to cause the form - flickering problem.
-            if (m.Msg == WM_NCHITTEST)
+            switch ((uint)m.Msg)
             {
+                case WM_NCHITTEST:
+                    return ProcessHitTest(ref m, ctx);
 
-                // Don't allow form dragging if we're dragging an item
-                if (ctx.IsDraggingItem)
-                {
-                    m.Result = (IntPtr)HTCLIENT;
-                    return true;
-                }
-                var pt = _targetForm.PointToClient(new Point(m.LParam.ToInt32()));
-                int borderSize = 10;
+                case WM_SYSCOMMAND:
+                    return ProcessSysCommand(ref m, ctx);
 
-                if (pt.X < borderSize && pt.Y < borderSize)
-                    m.Result = new IntPtr(HTTOPLEFT);
-                else if (pt.X > (_targetForm.Width - borderSize) && pt.Y < borderSize)
-                    m.Result = new IntPtr(HTTOPRIGHT);
-                else if (pt.X < borderSize && pt.Y > (_targetForm.Height - borderSize))
-                    m.Result = new IntPtr(HTBOTTOMLEFT);
-                else if (pt.X > (_targetForm.Width - borderSize) && pt.Y > (_targetForm.Height - borderSize))
-                    m.Result = new IntPtr(HTBOTTOMRIGHT);
-                else if (pt.Y > (_targetForm.Height - borderSize))
-                    m.Result = new IntPtr(HTBOTTOM);
-                else if (pt.X < borderSize)
-                    m.Result = new IntPtr(HTLEFT);
-                else if (pt.X > (_targetForm.Width - borderSize))
-                    m.Result = new IntPtr(HTRIGHT);
-                return true;
+                case WM_SHOWWINDOW:
+                    return ProcessShowWindow(ref m, ctx);
+
+                case WM_SIZE:
+                    return ProcessSize(ref m, ctx);
+
+                case WM_WINDOWPOSCHANGING:
+                    return ProcessWindowPosChanging(ref m, ctx);
+
+                case WM_SETFOCUS:
+                    return ProcessSetFocus(ref m, ctx);
+
+                case WM_DISPLAYCHANGE:
+                    return ProcessDisplayChange(ref m, ctx);
+
+                case WM_DPICHANGED:
+                    return ProcessDisplayChange(ref m, ctx);
+
+                case WM_NCMOUSELEAVE:
+                    return ProcessNcMouseLeave(ref m, ctx);
+
+                default:
+                    return false; // other mesg, let the base class handle
             }
-
-            // new screen resolution or dpi changed
-            if (m.Msg == WM_DISPLAYCHANGE || m.Msg == WM_DPICHANGED)
+        }
+        #region  method of process message
+        private bool ProcessHitTest(ref Message m, FenceWindowBehaviorContent ctx)
+        {
+            // Don't allow form dragging if we're dragging an item
+            if (ctx.IsDraggingItem)
             {
-                FenceManager.Instance.SizeAllFenceAuto();
-                //return true;
-            }
-                        
-            //  handle mouse down messages - don't intercept, let the base class handle it
-            if (m.Msg == WM_NCLBUTTONDOWN || m.Msg == WM_LBUTTONDOWN)
-            {
-                return false;  // let the base class handle it
-            }
-
-            //  handle mouse up messages - don't intercept, let the base class handle it
-            if (m.Msg == WM_NCLBUTTONUP || m.Msg == WM_LBUTTONUP)
-            {
-                return false;  // let the base class handle it
-            }
-
-            //  handle mouse move messages - don't intercept, let the base class handle it
-            if (m.Msg == WM_NCMOUSEMOVE || m.Msg == WM_MOUSEMOVE)
-            {
-                return false;  
-            }
-            // Mouse leave
-            var myrect = new Rectangle(new Point(_fenceInfo.PosX, _fenceInfo.PosY), new Size(_fenceInfo.Width,_fenceInfo.Height));
-            if (m.Msg == 0x02a2 && !myrect.IntersectsWith(
-                new Rectangle(ctx.MousePos,new Size(1, 1))))
-            {
-                //if (_targetForm.minifyToolStripMenuItem.Checked && !ctx.IsMinified)
-                //{
-                //    ctx.IsMinified = true;
-                //    prevHeight = Height;
-                //    Height = titleHeight;
-                //    Refresh();
-                //}
-            }
-
-            // Prevent maximize/minimize
-            if (m.Msg == WM_SYSCOMMAND)
-            {
-                var command = m.WParam.ToInt32() & 0xFFF0;
-                if (command == SC_MAXIMIZE || command == SC_MINIMIZE)
-                {
-                    m.Result = IntPtr.Zero;
-                    return true;
-                }
+                m.Result = (IntPtr)HTCLIENT;
                 return false;
             }
-            //   handle keyboard messages - don't intercept
-            if (m.Msg == WM_KEYDOWN || m.Msg == WM_KEYUP)
+            // Allow dragging and resizing
+            var pt = _targetForm.PointToClient(new Point(m.LParam.ToInt32()));
+            int borderSize = 10;
+
+            if (pt.X < borderSize && pt.Y < borderSize)
+                m.Result = new IntPtr(HTTOPLEFT);
+            else if (pt.X > (_targetForm.Width - borderSize) && pt.Y < borderSize)
+                m.Result = new IntPtr(HTTOPRIGHT);
+            else if (pt.X < borderSize && pt.Y > (_targetForm.Height - borderSize))
+                m.Result = new IntPtr(HTBOTTOMLEFT);
+            else if (pt.X > (_targetForm.Width - borderSize) && pt.Y > (_targetForm.Height - borderSize))
+                m.Result = new IntPtr(HTBOTTOMRIGHT);
+            else if (pt.Y > (_targetForm.Height - borderSize))
+                m.Result = new IntPtr(HTBOTTOM);
+            else if (pt.X < borderSize)
+                m.Result = new IntPtr(HTLEFT);
+            else if (pt.X > (_targetForm.Width - borderSize))
+                m.Result = new IntPtr(HTRIGHT);
+            return true;
+        }
+
+        private bool ProcessSysCommand(ref Message m, FenceWindowBehaviorContent ctx)
+        {
+            int command = m.WParam.ToInt32() & 0xFFF0;
+            if (command == SC_MAXIMIZE || command == SC_MINIMIZE)
             {
-                return false;  
+                m.Result = IntPtr.Zero;
+                return true;
             }
-            // Prevent window from being hidden (Show Desktop)
-            if (m.Msg == WM_SHOWWINDOW && m.WParam == IntPtr.Zero)
+            return false; 
+        }
+
+        private bool ProcessShowWindow(ref Message m, FenceWindowBehaviorContent ctx)
+        {
+            if (m.WParam == IntPtr.Zero) //hide command
             {
-                // Ignore hide commands unless we're auto-hiding or user is closing
                 if (!ctx.IsAutoHidden && !ctx.IsDisposed)
                 {
                     m.Result = IntPtr.Zero;
-                    //return false;
+                    return true;
                 }
             }
-
-            // Prevent window position changes that would hide the window (Show Desktop button)
-            if (m.Msg == WM_WINDOWPOSCHANGING)
-            {
-                var wp = Marshal.PtrToStructure<WINDOWPOS>(m.LParam);
-
-                // Check if the window is being moved off-screen or hidden
-                if ((wp.flags & HideWindowFlag) != 0)
-                {
-                    // Remove the hide flag unless we're auto-hiding
-                    if (!ctx.IsAutoHidden && !ctx.IsDisposed)
-                    {
-                        wp.flags &= ~HideWindowFlag;
-                        Marshal.StructureToPtr(wp, m.LParam, false);
-                        //return false;
-                    }
-                }
-            }
-            // By setting m.Result = IntPtr.Zero and returning, prevent the system from performing the default minimization operation.
-            if (m.Msg == WM_SIZE && m.WParam.ToInt32() == SIZE_MINIMIZED)
-            {
-                //EnsureFenceVisible();
-                m.Result = IntPtr.Zero;
-                //return true;
-            }
-
-            if (m.Msg == WM_WINDOWPOSCHANGED)
-            {
-                //var wp = Marshal.PtrToStructure<WINDOWPOS>(m.LParam);
-                //if ((wp.flags & HideWindowFlag) != 0 && !isAutoHidden && !IsDisposed)
-                //{
-                //    EnsureFenceVisible();
-                //    m.Result = IntPtr.Zero;
-                //    return;
-                //}
-            }
-
-            if (m.Msg == WM_COMMAND)
-            {
-                //int commandId = m.WParam.ToInt32() & 0xFFFF;
-                //if ((commandId == MIN_ALL || commandId == MIN_ALL_UNDO) && !isAutoHidden)
-                //{
-                //    EnsureFenceVisible();
-                //    m.Result = IntPtr.Zero;
-                //    return;
-                //}
-            }
-
-            // Prevent foreground
-            if (m.Msg == WM_SETFOCUS)
-            {
-                SendToDesktopBack();
-                //return true;
-            }
-
-          
             return false;
         }
-        private void SendToDesktopBack()
+        private bool ProcessSize(ref Message m, FenceWindowBehaviorContent ctx)
+        {
+            if (m.WParam.ToInt32() == SIZE_MINIMIZED)
+            {
+                m.Result = IntPtr.Zero;
+                return true;
+            }
+            return false;
+        }
+        private bool ProcessWindowPosChanging(ref Message m, FenceWindowBehaviorContent ctx)
+        {
+            var wp = Marshal.PtrToStructure<WINDOWPOS>(m.LParam);
+
+            if ((wp.flags & HideWindowFlag) != 0)
+            {
+                if (!ctx.IsAutoHidden && !ctx.IsDisposed)
+                {
+                    wp.flags &= ~HideWindowFlag;
+                    Marshal.StructureToPtr(wp, m.LParam, false);
+                    return false; 
+                }
+            }
+            return false;
+        }
+        private bool ProcessSetFocus(ref Message m, FenceWindowBehaviorContent ctx)
         {
             SetWindowPos(_targetForm.Handle, HWND_BOTTOM, 0, 0, 0, 0,
                 SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
+            return false;  // let the base class handle，windows can get focus
         }
+
+        private bool ProcessDisplayChange(ref Message m, FenceWindowBehaviorContent ctx)
+        {
+            // new screen resolution or dpi changed
+            FenceManager.Instance.SizeAllFenceCenter();
+            return false; 
+        }
+        private bool ProcessNcMouseLeave(ref Message m, FenceWindowBehaviorContent ctx)
+        {
+            var myrect = new Rectangle(new Point(_fenceInfo.PosX, _fenceInfo.PosY),
+                new Size(_fenceInfo.Width, _fenceInfo.Height));
+
+            if (!myrect.IntersectsWith(new Rectangle(ctx.MousePos, new Size(1, 1))))
+            {
+                // Minify();
+            }
+
+            return false; // let the base class handle mouse leave
+
+        }
+        #endregion
+
     }
 }

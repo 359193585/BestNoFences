@@ -90,7 +90,7 @@ namespace Fenceless.Win32
 
         public const int WM_NCLBUTTONDOWN = 0xA1;
         public const int HT_CAPTION = 0x2;
-
+        public const int WM_NCMOUSELEAVE = 0x02A2;
 
         [DllImport("user32.dll")]
         public static extern bool ReleaseCapture();
