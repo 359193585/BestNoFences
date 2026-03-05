@@ -155,11 +155,7 @@
 			<FilesToZip Include="$(PublishOutputDir)\**\*.*" />
 		</ItemGroup>
 
-		<ZipDirectory
-		  Condition="Exists($(PublishOutputDir))"
-		  SourceDirectory="$(PublishOutputDir)"
-		  DestinationFile="$(ZipFilePath)"
-		  Overwrite="true" />
+		<ZipDirectory Condition="Exists($(PublishOutputDir))" SourceDirectory="$(PublishOutputDir)" DestinationFile="$(ZipFilePath)" Overwrite="true" />
 
 		<Message Condition="Exists($(ZipFilePath))" Importance="high" Text="end zipped: $(ZipFilePath)" />
 		<Warning Condition="!Exists($(ZipFilePath))" Text="failed zippde: $(ZipFilePath)" />

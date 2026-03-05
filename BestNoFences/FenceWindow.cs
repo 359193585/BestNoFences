@@ -13,7 +13,7 @@ using FormsTimer = System.Windows.Forms.Timer;
 
 namespace Fenceless
 {
-    public partial class FenceWindow : Form
+    public partial class FenceWindow : SnapForm
     {
         #region private value
         private int logicalTitleHeight;
