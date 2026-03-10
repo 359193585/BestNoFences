@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Fenceless.UI;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -215,7 +216,7 @@ namespace Fenceless.DesktopManaagers
             {
                 // use defaule location
                 targetRoot = Path.Combine(DesktopFileManager.GetLastAvailableDrive(), "DesktopOrganized");
-                MessageBox.Show($"the default location is：{targetRoot}", "Notice", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CustomMessageBox.Show($"Default location is：{targetRoot}", "Notice", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             return targetRoot;
         }
@@ -230,7 +231,7 @@ namespace Fenceless.DesktopManaagers
                 var stats = CalculateStatistics();
                 if (stats.TotalFilesExcludeLnk == 0) return result;
 
-                DialogResult dialogResult = MessageBox.Show("Find files in desktop, do you want organize it? ", "Notice",
+                DialogResult dialogResult = CustomMessageBox.Show("Find files in desktop, do you want organize it? ", "Notice",
                    MessageBoxButtons.YesNo, MessageBoxIcon.Information);
                 if (dialogResult == DialogResult.Yes)
                 {
@@ -249,7 +250,7 @@ namespace Fenceless.DesktopManaagers
             }
             catch
             {
-                MessageBox.Show($"dest path is not exist: {_targetRoot} .", "Notice", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                CustomMessageBox.Show($"Dest path is not exist: {_targetRoot} .", "Notice", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return CalculateStatistics();
             }
             var records = await OrganizeAsync();
@@ -259,7 +260,11 @@ namespace Fenceless.DesktopManaagers
                 MovedFiles = records
             };
             SaveOperationRecord(operation);
-
+            try
+            {
+                System.Diagnostics.Process.Start("explorer.exe", targetRoot);
+            }
+            catch { }
             // rescan the desktop to update current files
             _currentFiles = await ScanDesktopAsync();
             return CalculateStatistics();
