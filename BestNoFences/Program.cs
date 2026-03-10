@@ -1,5 +1,6 @@
 using Fenceless.DesktopManaagers;
 using Fenceless.Model;
+using Fenceless.UI;
 using Fenceless.Util;
 using Fenceless.Win32;
 using Microsoft.Win32;
@@ -169,6 +170,12 @@ namespace Fenceless
 
             contextMenu.Items.Add(addFenceMenuItem);
 
+
+            // Add organize desktop file menu item
+            var organizeDesotopFileMenuItem = new ToolStripMenuItem("Organize desktop files");
+            organizeDesotopFileMenuItem.Click += (s, e) => OrganizeDesktopFile();
+            contextMenu.Items.Add(organizeDesotopFileMenuItem);
+
             // Add Log Viewer menu item
             var logViewerMenuItem = new ToolStripMenuItem("View Logs");
             logViewerMenuItem.Click += (s, e) => ShowLogViewer();
@@ -280,6 +287,24 @@ namespace Fenceless
             };
             contextMenu.Items.Add(exitMenuItem);
             return contextMenu;
+        }
+
+        private async static void OrganizeDesktopFile()
+        {
+            var resule = await desktopFileManager.ScanDesktopAsync();
+            var stats = desktopFileManager.GetStatistics();
+            if (stats.TotalFilesExcludeLnk > 0)
+            {
+                DialogResult result =  CustomMessageBox.Show($"Find {stats.TotalFilesExcludeLnk} files on desktop, do you want organize? ", "Notice", MessageBoxButtons.YesNo,MessageBoxIcon.Question);
+                if(result == DialogResult.Yes)
+                {
+                    await desktopFileManager.ScanDesktopAsync("user oprate self");
+                }
+            }
+            else
+            {
+                CustomMessageBox.Show("No file on desktop! ", "Notice", MessageBoxButtons.OK);
+            }
         }
 
         private static void EnableDPIAwareness()

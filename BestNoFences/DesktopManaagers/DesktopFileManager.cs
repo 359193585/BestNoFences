@@ -241,6 +241,15 @@ namespace Fenceless.DesktopManaagers
             }
             return result;
         }
+        public async Task<List<DesktopFileInfo>> ScanDesktopAsync(string UserOperateSelf)
+        {
+            var result = await ScanDesktopAsync();
+            var stats = CalculateStatistics();
+            if (stats.TotalFilesExcludeLnk == 0) return result;
+            var targetRoot = GetUserSelectRoot();
+            await OrganizeAsync(targetRoot);
+            return result;
+        }
         public async Task<DesktopStatistics> OrganizeAsync(string targetRoot)
         {
             _targetRoot = targetRoot ?? Path.Combine(GetLastAvailableDrive(), "DesktopOrganized");
