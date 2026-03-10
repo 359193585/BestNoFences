@@ -4,11 +4,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.14.36414.22
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BestNoFences", "BestNoFences\BestNoFences.csproj", "{9B7EC27E-0066-4455-987C-6DC88C4BEE54}"
-	ProjectSection(ProjectDependencies) = postProject
-		{B0ABFE52-E495-1E6B-757A-8BF43BE19865} = {B0ABFE52-E495-1E6B-757A-8BF43BE19865}
-	EndProjectSection
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesktopIconControl", "DesktopIconControl\DesktopIconControl.csproj", "{B0ABFE52-E495-1E6B-757A-8BF43BE19865}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -20,10 +15,6 @@ Global
 		{9B7EC27E-0066-4455-987C-6DC88C4BEE54}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9B7EC27E-0066-4455-987C-6DC88C4BEE54}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9B7EC27E-0066-4455-987C-6DC88C4BEE54}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B0ABFE52-E495-1E6B-757A-8BF43BE19865}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B0ABFE52-E495-1E6B-757A-8BF43BE19865}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B0ABFE52-E495-1E6B-757A-8BF43BE19865}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B0ABFE52-E495-1E6B-757A-8BF43BE19865}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

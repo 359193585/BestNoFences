@@ -121,7 +121,7 @@ internal sealed class SnapManager
 
             else if (Near(moving.Right, target.Left))
             {
-                moving.X = target.Left - moving.Width + HorizontalCompensation - 1;
+                moving.X = target.Left - moving.Width + HorizontalCompensation - 0;
                 //than top/bottom align
                 if (Near(moving.Top, target.Top))
                 {
@@ -140,7 +140,7 @@ internal sealed class SnapManager
         {
             if (Near(moving.Top, target.Bottom))
             {
-                moving.Y = target.Bottom - (VerticalCompensation - 7);
+                moving.Y = target.Bottom - (VerticalCompensation - 0);
 
                 //than try left/right align
                 if (Near(moving.Left, target.Left))
@@ -167,7 +167,7 @@ internal sealed class SnapManager
             case WMSZ_TOP:
                 if (HorizontalOverlap(moving, target) && Near(moving.Top, target.Bottom))
                 {
-                    int newTop = target.Bottom - VerticalCompensation + 6;
+                    int newTop = target.Bottom - VerticalCompensation + 0;
                     moving.Height = moving.Bottom - newTop;
                     moving.Y = newTop;
                 }
@@ -176,7 +176,7 @@ internal sealed class SnapManager
             case WMSZ_BOTTOM:
                 if (HorizontalOverlap(moving, target) && Near(moving.Bottom, target.Top))
                 {
-                    moving.Height = target.Top - moving.Top + VerticalCompensation + 1;
+                    moving.Height = target.Top - moving.Top + VerticalCompensation + 0;
                 }
                 break;
 

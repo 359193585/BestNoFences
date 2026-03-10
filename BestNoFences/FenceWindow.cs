@@ -1,4 +1,5 @@
 ﻿using DesktopIconControl;
+using Fenceless.DesktopManaagers;
 using Fenceless.Model;
 using Fenceless.UI;
 using Fenceless.Util;
@@ -15,6 +16,9 @@ namespace Fenceless
 {
     public partial class FenceWindow : SnapForm
     {
+        private readonly Logger logger;
+        private static DesktopFileManager desktopFileManager;
+
         #region private value
         private int logicalTitleHeight;
         private int titleHeight;
@@ -64,7 +68,6 @@ namespace Fenceless
         private readonly ShellContextMenu shellContextMenu2 = new ShellContextMenu();
         private readonly ThumbnailProvider thumbnailProvider = new ThumbnailProvider();
         private readonly FenceInfo _fenceInfo;
-        private readonly Logger logger;
         private FenceRenderer _fenceRenderer;  // Declare the renderer instance
         private FenceInteractionHandler _handler;
         private FenceWindowBehavior _behaviorManager;
@@ -78,6 +81,7 @@ namespace Fenceless
 
             logger = Logger.Instance;
             logger.Debug($"Creating fence window for '{fenceInfo.Name}'", "FenceWindow");
+            desktopFileManager = DesktopFileManager.Instance; 
 
             _fenceRenderer = new FenceRenderer(_fenceInfo, logger);// rendering process
             _handler = new FenceInteractionHandler(_fenceInfo, logger);

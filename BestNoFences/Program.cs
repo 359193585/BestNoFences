@@ -1,3 +1,4 @@
+using Fenceless.DesktopManaagers;
 using Fenceless.Model;
 using Fenceless.Util;
 using Fenceless.Win32;
@@ -16,6 +17,7 @@ namespace Fenceless
     static class Program
     {
         private static Logger logger;
+        private static DesktopFileManager desktopFileManager;
         private static UI.LogViewerForm logViewerForm;
 
         #region test  code for DPI awareness - may be used in the future if we decide to make the app per-monitor DPI aware
@@ -50,6 +52,8 @@ namespace Fenceless
             {
                 // Initialize logging first
                 logger = Logger.Instance;
+
+                desktopFileManager = DesktopFileManager.Instance;
 
                 // Load settings to configure logging properly
                 var settings = AppSettings.Instance;

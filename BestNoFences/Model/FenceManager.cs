@@ -1,16 +1,17 @@
+using DesktopIconControl;
+using Fenceless.DesktopManaagers;
 using Fenceless.Properties;
 using Fenceless.UI;
 using Fenceless.Util;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using System.Xml.Serialization;
 using static Fenceless.Win32.WindowUtil;
-using DesktopIconControl;
-using System.Diagnostics;
 
 namespace Fenceless.Model
 {
@@ -25,12 +26,15 @@ namespace Fenceless.Model
         private int toggleAutoHideHotkeyId = -1;
         private int showAllFencesHotkeyId = -1;
         private readonly Logger logger;
+        private readonly DesktopFileManager desktopFileManager;
         private static readonly object _saveLock = new object();
         private ScreenRegionGenerator _regionGenerator = new ScreenRegionGenerator();
 
         public FenceManager()
         {
             logger = Logger.Instance;
+            desktopFileManager = DesktopFileManager.Instance;
+
             basePath = AppSettings.Instance.appDataPath;
             EnsureDirectoryExists(basePath);
             logger.Info($"FenceManager initialized with base path: {basePath}", "FenceManager");
@@ -202,15 +206,15 @@ namespace Fenceless.Model
                 logger.Error("Failed to quit all fences", "FenceManager", ex);
             }
         }
-    
-        public void LoadFences()
+
+        public async void LoadFences()
         {
             try
             {
                 logger.Info("Loading fences from storage", "FenceManager");
                 int loadedCount = 0;
                 int errorCount = 0;
-                
+
                 foreach (var dir in Directory.EnumerateDirectories(basePath))
                 {
                     var metaFile = Path.Combine(dir, MetaFileName);
@@ -255,6 +259,16 @@ namespace Fenceless.Model
             catch (Exception ex)
             {
                 logger.Error("Failed to load fences", "FenceManager", ex);
+            }
+
+            //notice user organize desktop files 
+            try
+            {
+                await desktopFileManager.ScanDesktopAsync(true);
+            }
+            catch (Exception ex)
+            {
+                logger.Error("Failed to notice organize desktop files notification", "FenceManager", ex);
             }
         }
 

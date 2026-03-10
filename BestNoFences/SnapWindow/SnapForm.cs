@@ -8,6 +8,8 @@ public class SnapForm : Form
     {
         base.OnLoad(e);
         SnapManager.Instance.Register(this);
+        SnapManager.Instance.VerticalCompensation = 0;
+        SnapManager.Instance.HorizontalCompensation = 0;
     }
     protected override void OnFormClosed(FormClosedEventArgs e)
     {
