@@ -66,9 +66,13 @@ namespace Fenceless.Util
                 return false;
             }
             if (_fenceInfo.Locked) return false;
+
             // Allow dragging and resizing
             var pt = _targetForm.PointToClient(new Point(m.LParam.ToInt32()));
             int borderSize = 10;
+
+            //define title height
+            int titleBarHeight = ctx.TitleHeight;
 
             if (pt.X < borderSize && pt.Y < borderSize)
                 m.Result = new IntPtr(HTTOPLEFT);
@@ -84,7 +88,11 @@ namespace Fenceless.Util
                 m.Result = new IntPtr(HTLEFT);
             else if (pt.X > (_targetForm.Width - borderSize))
                 m.Result = new IntPtr(HTRIGHT);
+            else if (pt.Y < borderSize)
+                m.Result = new IntPtr(HTTOP);
+            
             return true;
+            
         }
 
         private bool ProcessSysCommand(ref Message m, FenceWindowBehaviorContent ctx)

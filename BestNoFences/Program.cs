@@ -377,7 +377,7 @@ namespace Fenceless
             catch (Exception ex)
             {
                 logger.Error("Failed to show log viewer", "Main", ex);
-                MessageBox.Show($"Failed to show log viewer: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                CustomMessageBox.Show($"Failed to show log viewer: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
         
