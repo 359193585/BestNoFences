@@ -118,24 +118,24 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="lockedToolStripMenuItem.Text" xml:space="preserve">
-    <value>Lock</value>
+    <value>锁定</value>
   </data>
   <data name="newFenceToolStripMenuItem.Text" xml:space="preserve">
-    <value>New Fence</value>
+    <value>创建新窗体</value>
   </data>
   <data name="minifyToolStripMenuItem.Text" xml:space="preserve">
-    <value>Minify</value>
+    <value>最小化</value>
   </data>
   <data name="exitToolStripMenuItem.Text" xml:space="preserve">
-    <value>Remove Fence</value>
+    <value>删除本窗体</value>
   </data>
   <data name="deleteItemToolStripMenuItem.Text" xml:space="preserve">
-    <value>Delete item</value>
+    <value>删除快捷方式</value>
   </data>
   <data name="renameToolStripMenuItem.Text" xml:space="preserve">
-    <value>Rename</value>
+    <value>重命名</value>
   </data>
   <data name="settingsToolStripMenuItem.Text" xml:space="preserve">
-    <value>Settings</value>
+    <value>设置</value>
   </data>
 </root>

@@ -242,7 +242,23 @@
   <data name="renameToolStripMenuItem.Text" xml:space="preserve">
     <value>Rename</value>
   </data>
-  <metadata name="$this.Localizable" type="System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
+
+<data name="&gt;&gt;settingsToolStripMenuItem.Name" xml:space="preserve">
+  <value>settingsToolStripMenuItem</value>
+</data>
+<data name="&gt;&gt;settingsToolStripMenuItem.Type" xml:space="preserve">
+   <value>System.Windows.Forms.ToolStripMenuItem, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+</data>
+	<data name="settingsToolStripMenuItem.Size" type="System.Drawing.Size, System.Drawing">
+		<value>160, 22</value>
+</data>
+<data name="settingsToolStripMenuItem.Text" xml:space="preserve">
+  <value>Settings</value>
+</data>
+
+
+
+	<metadata name="$this.Localizable" type="System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">
     <value>True</value>
   </metadata>
   <metadata name="appContextMenu.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
