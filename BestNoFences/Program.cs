@@ -8,6 +8,7 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Resources;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,6 +21,7 @@ namespace Fenceless
         private static Logger logger;
         private static DesktopFileManager desktopFileManager;
         private static UI.LogViewerForm logViewerForm;
+        private static readonly ResourceManager _resManager = new ResourceManager("Fenceless.TrayMenu", typeof(Program).Assembly);
 
         #region test  code for DPI awareness - may be used in the future if we decide to make the app per-monitor DPI aware
         [DllImport("user32.dll")]
@@ -157,9 +159,9 @@ namespace Fenceless
             var contextMenu = new ContextMenuStrip();
 
             // Add Fence menu item with sub menu for fence type
-            var addFenceMenuItem = new ToolStripMenuItem("Add Fence");
+            var addFenceMenuItem = new ToolStripMenuItem(GetText("MenuAddFence"));
 
-            var normalFenceMenuItem = new ToolStripMenuItem("Normal Fence");
+            var normalFenceMenuItem = new ToolStripMenuItem(GetText("MenuNormalFence"));
             normalFenceMenuItem.Click += (s, e) =>
             {
                 logger.Info("Add Normal Fence requested from tray menu", "Main");
@@ -172,39 +174,41 @@ namespace Fenceless
 
 
             // Add organize desktop file menu item
-            var organizeDesotopFileMenuItem = new ToolStripMenuItem("Organize desktop files");
+            var organizeDesotopFileMenuItem = new ToolStripMenuItem(GetText("MenuOrganizeDesktopFiles"));
             organizeDesotopFileMenuItem.Click += (s, e) => OrganizeDesktopFile();
             contextMenu.Items.Add(organizeDesotopFileMenuItem);
 
             // Add Log Viewer menu item
-            var logViewerMenuItem = new ToolStripMenuItem("View Logs");
+            var logViewerMenuItem = new ToolStripMenuItem(GetText("MenuViewLogs"));
             logViewerMenuItem.Click += (s, e) => ShowLogViewer();
             contextMenu.Items.Add(logViewerMenuItem);
 
             // Add Settings menu item
-            var settingsMenuItem = new ToolStripMenuItem("Settings");
+            var settingsMenuItem = new ToolStripMenuItem(GetText("MenuSettings"));
             settingsMenuItem.Click += (s, e) => FenceManager.Instance.ShowGlobalSettings();
             contextMenu.Items.Add(settingsMenuItem);
 
             contextMenu.Items.Add(new ToolStripSeparator()); // -----------------
 
             // Add auto size menu item with sub ment
-            var autoSizeFences = new ToolStripMenuItem("Fences Size");
+            var autoSizeFences = new ToolStripMenuItem(GetText("MenuFencesSize"));
 
-            var autoSizeLeftMentItem = new ToolStripMenuItem("Size Left");
+            var autoSizeLeftMentItem = new ToolStripMenuItem(GetText("MenuSizeLeft"));
             autoSizeLeftMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceLeft();
-            var autoSizeCenterMentItem = new ToolStripMenuItem("Size Center");
+
+            var autoSizeCenterMentItem = new ToolStripMenuItem(GetText("MenuSizeCenter"));
             autoSizeCenterMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceCenter();
-            var autoSizeRightMentItem = new ToolStripMenuItem("Size Right");
+
+            var autoSizeRightMentItem = new ToolStripMenuItem(GetText("MenuSizeRight"));
             autoSizeRightMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceRight();
-            var autoSizeTopRightMentItem = new ToolStripMenuItem("Size TopRight");
+            var autoSizeTopRightMentItem = new ToolStripMenuItem(GetText("MenuSizeTopRight"));
             autoSizeTopRightMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceTopRight();
-            var autoSizeFullMentItem = new ToolStripMenuItem("Size Auto");
+            var autoSizeFullMentItem = new ToolStripMenuItem(GetText("MenuSizeAuto"));
             autoSizeFullMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceAuto();
-            var autoSizeHideMentItem = new ToolStripMenuItem("Hide All");
+            var autoSizeHideMentItem = new ToolStripMenuItem(GetText("MenuHideAll"));
             autoSizeHideMentItem.Click += (s, e) => FenceManager.Instance.HideAllFences();
             //autoSizeHideMentItem.Click += (s, e) => FenceManager.Instance.SizeAllFenceMiniRightBottom();
-            var autoSizeShowMentItem = new ToolStripMenuItem("Show All");
+            var autoSizeShowMentItem = new ToolStripMenuItem(GetText("MenuShowAll"));
             autoSizeShowMentItem.Click += (s, e) => FenceManager.Instance.ShowAllFence();
 
 
@@ -221,7 +225,7 @@ namespace Fenceless
             contextMenu.Items.Add(new ToolStripSeparator()); // -----------------
 
             // Add Start with Windows checkbox
-            var startWithWindowsMenuItem = new ToolStripMenuItem("Start with Windows");
+            var startWithWindowsMenuItem = new ToolStripMenuItem(GetText("MenuStartwithWindows"));
             startWithWindowsMenuItem.CheckOnClick = true;
 
             // Sync the setting with actual registry state at startup
@@ -278,7 +282,7 @@ namespace Fenceless
 
             contextMenu.Items.Add(new ToolStripSeparator());
 
-            var exitMenuItem = new ToolStripMenuItem("Exit");
+            var exitMenuItem = new ToolStripMenuItem(GetText("MenuExit"));
             exitMenuItem.Click += (s, e) =>
             {
                 logger.Info("Exit requested from tray menu", "Main");
@@ -406,5 +410,13 @@ namespace Fenceless
                     Debug.WriteLine($"Error during application exit: {ex.Message}");
             }
         }
+
+
+        private static string GetText(string key)
+        {
+            return _resManager.GetString(key) ?? key;
+        }
+
+
     }
 }
