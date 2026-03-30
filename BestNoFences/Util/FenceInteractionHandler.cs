@@ -225,11 +225,11 @@ namespace Fenceless.Util
 
                 foreach (var file in dropedFiles)
                 {
-                    if (_fenceInfo.Files.Contains(file) || !ItemExists(file))
-                    {
-                        _logger.Debug($"Skipped file (already exists or invalid): {file}", "FenceWindow");
-                        continue;
-                    }
+                    //if (_fenceInfo.Files.Contains(file) || !ItemExists(file))
+                    //{
+                    //    _logger.Debug($"Skipped file (already exists or invalid): {file}", "FenceWindow");
+                    //    continue;
+                    //}
                     string newFile = file;
 
                     if (Path.GetExtension(file).Equals(".lnk", StringComparison.OrdinalIgnoreCase))
@@ -282,7 +282,16 @@ namespace Fenceless.Util
                         };
                         newFile = new LnkHelper().CreateShortcutDynamic(lnk);
                     }
-
+                    if (_fenceInfo.Files.Contains(newFile) || !ItemExists(newFile))
+                    {
+                        _logger.Debug($"Skipped file (already exists ): {newFile}", "FenceWindow");
+                        CustomMessageBox.Show(
+                                $"Shortcut {newFile}already exists",
+                                "FenceWindow | Message",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Information);
+                        continue;
+                    }
                     if (AppSettings.Instance.isDeleteSourceLinkFile == 1)
                     {
                         newFile = DeleteSourceShortcutFile(file);
