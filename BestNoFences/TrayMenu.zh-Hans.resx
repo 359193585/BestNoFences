@@ -162,4 +162,7 @@
   <data name="MenuExit" xml:space="preserve">
     <value>退出</value>
   </data>
+  <data name="Shortcut" xml:space="preserve">
+    <value>快捷方式</value>
+  </data>
 </root>

@@ -8,6 +8,7 @@ using Peter;
 using System;
 using System.Drawing;
 using System.IO;
+using System.Resources;
 using System.Windows.Forms;
 using static Fenceless.Win32.WindowUtil;
 using FormsTimer = System.Windows.Forms.Timer;
@@ -18,7 +19,7 @@ namespace Fenceless
     {
         private readonly Logger logger;
         private static DesktopFileManager desktopFileManager;
-
+      
         #region private value
         private int logicalTitleHeight;
         private int titleHeight;
@@ -81,7 +82,7 @@ namespace Fenceless
 
             logger = Logger.Instance;
             logger.Debug($"Creating fence window for '{fenceInfo.Name}'", "FenceWindow");
-            desktopFileManager = DesktopFileManager.Instance; 
+            desktopFileManager = DesktopFileManager.Instance;
 
             _fenceRenderer = new FenceRenderer(_fenceInfo, logger);// rendering process
             _handler = new FenceInteractionHandler(_fenceInfo, logger);
@@ -121,7 +122,7 @@ namespace Fenceless
             Minify();
             logger.Info($"Fence window '{fenceInfo.Name}' created successfully at ({fenceInfo.PosX}, {fenceInfo.PosY})", "FenceWindow");
         }
-      
+
         private void SetupEventHandlers()
         {
             removeItemToolStripMenuItem.Click += (sender, e) =>
@@ -401,7 +402,7 @@ namespace Fenceless
         private void exitToolStripMenuItem_Click(object sender, EventArgs e)
         {
             string fenceName = _fenceInfo.Name;
-            if (CustomMessageBox.Show( $"Really remove this fence? \r\n fence name = {_fenceInfo.Name}", "Remove", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            if (CustomMessageBox.Show($"Really remove this fence? \r\n fence name = {_fenceInfo.Name}", "Remove", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             {
                 FenceManager.Instance.RemoveFence(_fenceInfo);
                 Close();
@@ -444,12 +445,13 @@ namespace Fenceless
         private void FenceWindow_DragDrop(object sender, DragEventArgs e)
         {
             var dropped = (string[])e.Data.GetData(DataFormats.FileDrop);
-            this.BeginInvoke(new Action(() =>{
+            this.BeginInvoke(new Action(() =>
+            {
                 _handler.HandleExternalDrop(dropped);
                 Refresh();
 
             }));
-           
+
         }
 
         private void FenceWindow_Resize(object sender, EventArgs e)
@@ -496,7 +498,8 @@ namespace Fenceless
             if (dragRefreshTimer == null)
             {
                 dragRefreshTimer = new FormsTimer { Interval = 16 };
-                dragRefreshTimer.Tick += (s, a) => {
+                dragRefreshTimer.Tick += (s, a) =>
+                {
                     if (_handler.IsDraggingItem)
                     {
                         Invalidate();
@@ -524,7 +527,7 @@ namespace Fenceless
                     this.Cursor = Cursors.Hand;
                     _isDragReady = true;
                     _isFormDrag = false;
-                    _handler.PrepareDrag(targetPath, e.Location); 
+                    _handler.PrepareDrag(targetPath, e.Location);
                     draggingItem = targetPath;
                     selectedItem = targetPath;
                 }
@@ -537,10 +540,10 @@ namespace Fenceless
                 else if (action == ClickActionResult.ItemRemoved)
                 {
                     ResetDragUI();
-                    this.Refresh(); 
+                    this.Refresh();
                 }
             }
-          
+
         }
 
         private void FenceWindow_MouseUp(object sender, MouseEventArgs e)
@@ -561,7 +564,7 @@ namespace Fenceless
         private void ResetDragUI()
         {
             _handler.ResetDragState();
-            
+
             this.Cursor = Cursors.Default;
             this.Text = _fenceInfo.Name;
             this.selectedItem = null;
@@ -576,7 +579,7 @@ namespace Fenceless
             Invalidate();
             Refresh();
         }
-        
+
         private void FenceWindow_MouseEnter(object sender, EventArgs e)
         {
             isMouseInside = true;
@@ -617,7 +620,7 @@ namespace Fenceless
             _fenceInfo.CanMinify = minifyToolStripMenuItem.Checked;
             Save();
         }
-      
+
         private void FenceWindow_Click(object sender, EventArgs e)
         {
             // Only handle selection if we're not dragging
@@ -641,10 +644,10 @@ namespace Fenceless
 
                 this.selectedItem = newSelectedItem;
 
-                if (needsRefresh)Refresh();
+                if (needsRefresh) Refresh();
             }
         }
-      
+
         private void renameToolStripMenuItem_Click(object sender, EventArgs e)
         {
             var dialog = new UI.EditDialog("Edit Name", Text, "New name:");
@@ -933,7 +936,7 @@ namespace Fenceless
             DesktopIconManager.ArrangeToLeft();
             // Validate items when the fence loads
             var itemsToRemove = _handler.ValidateAndCleanupItems();
-            if (itemsToRemove !=null )
+            if (itemsToRemove != null)
             {
                 selectedItem = null;
                 Save();
@@ -1175,7 +1178,7 @@ namespace Fenceless
                 base.OnPaint(e);
                 if (_handler == null || _fenceRenderer == null || thumbnailProvider == null)
                 {
-                    return; 
+                    return;
                 }
                 var ctx = new FencePaintContext
                 {
@@ -1203,8 +1206,8 @@ namespace Fenceless
                 };
                 var providersObject = new
                 {
-                    IconCache = iconCache, 
-                    ThumbnailProvider = thumbnailProvider 
+                    IconCache = iconCache,
+                    ThumbnailProvider = thumbnailProvider
                 };
 
 
@@ -1260,7 +1263,7 @@ namespace Fenceless
             }
             base.SetVisibleCore(value);
         }
-       
+
         protected override void Dispose(bool disposing)
         {
             if (disposing)

@@ -194,5 +194,14 @@ namespace Fenceless {
                 return ResourceManager.GetString("MenuViewLogs", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   查找类似 Shortcut 的本地化字符串。
+        /// </summary>
+        internal static string Shortcut {
+            get {
+                return ResourceManager.GetString("Shortcut", resourceCulture);
+            }
+        }
     }
 }

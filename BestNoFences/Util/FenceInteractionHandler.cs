@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Resources;
 using System.Windows.Forms;
 using static Fenceless.Win32.WindowUtil;
 
@@ -216,6 +217,9 @@ namespace Fenceless.Util
 
             return false;
         }
+
+        // Icon drag - in processing
+        // Remind the user whether to keep the original desktop icons.
         public void HandleExternalDrop(string[] dropedFiles)
         {
             try
@@ -225,11 +229,6 @@ namespace Fenceless.Util
 
                 foreach (var file in dropedFiles)
                 {
-                    //if (_fenceInfo.Files.Contains(file) || !ItemExists(file))
-                    //{
-                    //    _logger.Debug($"Skipped file (already exists or invalid): {file}", "FenceWindow");
-                    //    continue;
-                    //}
                     string newFile = file;
 
                     if (Path.GetExtension(file).Equals(".lnk", StringComparison.OrdinalIgnoreCase))
@@ -269,14 +268,14 @@ namespace Fenceless.Util
                         }
                         #endregion
                     }
-                    else  // not a .lnk file, create new link file in  user appdata
+                    else  // not a .lnk file, like .exe file, create new link file in  user appdata
                     {
 
                         var lnk = new LnkFileManager
                         {
                             TargetFilePath = file,
                             ShortcutFilePath = AppSettings.Instance.appDataPath + "\\shortcutbak",
-                            ShortcutName = Path.GetFileName(file),
+                            ShortcutName = Path.GetFileName(file)+ " - " + GetText("Shortcut"),
                             Description ="shortcut create by bestnofences",
                             WorkingDirectory=Path.GetDirectoryName(file)
                         };
@@ -286,7 +285,7 @@ namespace Fenceless.Util
                     {
                         _logger.Debug($"Skipped file (already exists ): {newFile}", "FenceWindow");
                         CustomMessageBox.Show(
-                                $"Shortcut {newFile}already exists",
+                                $"Shortcut {newFile} already exists.",
                                 "FenceWindow | Message",
                                 MessageBoxButtons.OK,
                                 MessageBoxIcon.Information);
@@ -439,6 +438,11 @@ namespace Fenceless.Util
             return itemsToRemove;
         }
         private void Save() => FenceManager.Instance.UpdateFence(_fenceInfo);
-        
+
+        private static readonly ResourceManager _resManager = new ResourceManager("Fenceless.TrayMenu", typeof(Program).Assembly);
+        private static string GetText(string key)
+        {
+            return _resManager.GetString(key) ?? key;
+        }
     }
 }
