@@ -399,7 +399,7 @@ namespace Fenceless
             FenceManager.Instance.ShowAllFences();
         }
 
-        private void exitToolStripMenuItem_Click(object sender, EventArgs e)
+        private void removeFenceToolStripMenuItem_Click(object sender, EventArgs e)
         {
             string fenceName = _fenceInfo.Name;
             if (CustomMessageBox.Show($"Really remove this fence? \r\n fence name = {_fenceInfo.Name}", "Remove", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
