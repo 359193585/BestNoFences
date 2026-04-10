@@ -402,7 +402,7 @@ namespace Fenceless
         private void removeFenceToolStripMenuItem_Click(object sender, EventArgs e)
         {
             string fenceName = _fenceInfo.Name;
-            if (CustomMessageBox.Show($"Really remove this fence? \r\n fence name = {_fenceInfo.Name}", "Remove", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            if (CustomMessageBox.Show($"Really remove  fence \"{_fenceInfo.Name} \"? ", "Remove", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             {
                 FenceManager.Instance.RemoveFence(_fenceInfo);
                 Close();
