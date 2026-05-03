@@ -480,49 +480,7 @@ namespace Fenceless
                     return;
                 }
             }
-            //if (!_handler.IsDraggingItem && _isDragReady)
-            //{
-            //    Debug.WriteLine($"e.Location.X={e.Location.X},e.Location.Y ={e.Location.Y}");
-            //    if (this.ClientRectangle.Contains(e.Location))
-            //    {
-            //        // 在窗体内，更新内部渲染位置并重绘
-            //        if (_handler.ShouldStartItemDrag(e.Location))
-            //        {
-            //            this.Cursor = Cursors.Hand;
-            //            isDraggingItem = true;
-            //            this.Text = $"{_fenceInfo.Name} - Dragging {Path.GetFileName(_handler.DraggingItemPath)}";
-            //            _handler.StartItemDrag(selectedItem, e.Location);
-            //            StartDragTimer(); //  Start throttled refresh timer
-            //            this.Invalidate();
-            //        }
-            //    }
-            //    else
-            //    {
-            //        // --- 关键点：鼠标移出窗体，转交给 Windows 系统处理 ---
-            //        string path = _handler.DraggingItemPath;
-            //        if (!string.IsNullOrEmpty(path))
-            //        {
-            //            // A. 立即重置内部拖拽状态，防止 Renderer 继续画虚影
-            //            var dragPath = path;
-            //            ResetDragUI(); // 调用你已有的清理 UI 的方法
-
-            //            // B. 发起系统拖放
-            //            // DataFormats.FileDrop 是让桌面识别为文件的关键
-            //            DataObject data = new DataObject(DataFormats.FileDrop, new string[] { dragPath });
-
-            //            // 执行拖放 (这会阻塞直到松开鼠标)
-            //            DragDropEffects result = this.DoDragDrop(data, DragDropEffects.Move);
-
-            //            // C. 如果成功移动到桌面或其它文件夹，从集合中删除
-            //            if (result == DragDropEffects.Move)
-            //            {
-            //                _fenceInfo.Files.Remove(dragPath);
-            //                // 强制保存或刷新
-            //                this.Invalidate();
-            //            }
-            //        }
-            //    }
-            //}
+           
             if (_isDragReady && !_handler.IsDraggingItem)
             {
                 if (_handler.ShouldStartItemDrag(e.Location))
