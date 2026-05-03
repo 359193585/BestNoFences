@@ -6,6 +6,7 @@ using Fenceless.Util;
 using Fenceless.Win32;
 using Peter;
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Resources;
@@ -468,6 +469,8 @@ namespace Fenceless
 
         private void FenceWindow_MouseMove(object sender, MouseEventArgs e)
         {
+            //Debug.WriteLine($"e.Location.X={e.Location.X},e.Location.Y ={e.Location.Y}");
+
             if (_isFormDrag && e.Button == MouseButtons.Left && !_isDraggingForm)
             {
                 if (Math.Abs(e.X - _formDragStartPoint.X) > SystemInformation.DragSize.Width / 2 ||
@@ -477,10 +480,54 @@ namespace Fenceless
                     return;
                 }
             }
+            //if (!_handler.IsDraggingItem && _isDragReady)
+            //{
+            //    Debug.WriteLine($"e.Location.X={e.Location.X},e.Location.Y ={e.Location.Y}");
+            //    if (this.ClientRectangle.Contains(e.Location))
+            //    {
+            //        // 在窗体内，更新内部渲染位置并重绘
+            //        if (_handler.ShouldStartItemDrag(e.Location))
+            //        {
+            //            this.Cursor = Cursors.Hand;
+            //            isDraggingItem = true;
+            //            this.Text = $"{_fenceInfo.Name} - Dragging {Path.GetFileName(_handler.DraggingItemPath)}";
+            //            _handler.StartItemDrag(selectedItem, e.Location);
+            //            StartDragTimer(); //  Start throttled refresh timer
+            //            this.Invalidate();
+            //        }
+            //    }
+            //    else
+            //    {
+            //        // --- 关键点：鼠标移出窗体，转交给 Windows 系统处理 ---
+            //        string path = _handler.DraggingItemPath;
+            //        if (!string.IsNullOrEmpty(path))
+            //        {
+            //            // A. 立即重置内部拖拽状态，防止 Renderer 继续画虚影
+            //            var dragPath = path;
+            //            ResetDragUI(); // 调用你已有的清理 UI 的方法
+
+            //            // B. 发起系统拖放
+            //            // DataFormats.FileDrop 是让桌面识别为文件的关键
+            //            DataObject data = new DataObject(DataFormats.FileDrop, new string[] { dragPath });
+
+            //            // 执行拖放 (这会阻塞直到松开鼠标)
+            //            DragDropEffects result = this.DoDragDrop(data, DragDropEffects.Move);
+
+            //            // C. 如果成功移动到桌面或其它文件夹，从集合中删除
+            //            if (result == DragDropEffects.Move)
+            //            {
+            //                _fenceInfo.Files.Remove(dragPath);
+            //                // 强制保存或刷新
+            //                this.Invalidate();
+            //            }
+            //        }
+            //    }
+            //}
             if (_isDragReady && !_handler.IsDraggingItem)
             {
                 if (_handler.ShouldStartItemDrag(e.Location))
                 {
+                    //Debug.WriteLine($"e.Location.X={e.Location.X},e.Location.Y ={e.Location.Y}");
                     this.Cursor = Cursors.Hand;
                     isDraggingItem = true;
                     this.Text = $"{_fenceInfo.Name} - Dragging {Path.GetFileName(_handler.DraggingItemPath)}";
@@ -951,71 +998,48 @@ namespace Fenceless
 
             if (hoveringItem != null && !ModifierKeys.HasFlag(Keys.Shift))
             {
-                shellContextMenu.CustomMenuItemSelected += OnRemoveFromFence;
-                shellContextMenu.ShowContextMenu(
-                    new[] { new FileInfo(hoveringItem) },
-                    MousePosition,
-                    (filePath) => "Remove from fence"
-                );
+                shellContextMenu.CustomMenuItemSelected += OnCustomMenuAction;
 
-                //ShowCustomContextMenu(hoveringItem, MousePosition);
+                // show single menu is right click
+                //shellContextMenu.ShowContextMenu(
+                //    new[] { new FileInfo(hoveringItem) },
+                //    MousePosition,
+                //    (filePath) => "Fenless manage"
+                //);
+
+                // show menu with sub item, string[0] is father menu ,and other is subitem
+                shellContextMenu.ShowContextMenu(
+                   [new FileInfo(hoveringItem)],
+                   MousePosition,
+                   ["Fenless manage", "Remove from fence", "Back to desktop"]
+               );
             }
             else
             {
                 appContextMenu.Show(this, e.Location);
             }
         }
-
-
-
-        private void ShowCustomContextMenu(string filePath, Point location)
+        private const uint CMD_LAST = 30000;
+        private void OnCustomMenuAction(object sender, CustomMenuEventArgs e)
         {
-            ContextMenuStrip customMenu = new ContextMenuStrip();
-            ToolStripMenuItem removeItem = new ToolStripMenuItem("Remove from fence");
-            removeItem.Click += (s, e) => OnRemoveFromFence(this, new CustomMenuEventArgs(filePath));
+            const uint ID_REMOVE = CMD_LAST + 1; 
+            const uint ID_BACK_TO_DESKTOP = CMD_LAST + 2; 
 
-            ToolStripMenuItem addItem = new ToolStripMenuItem("Back to desktop");
-            addItem.Click += (s, e) => OnBackToDesktop(this, new CustomMenuEventArgs(filePath));
-
-            ToolStripMenuItem systemMenuItem = new ToolStripMenuItem("System Menu");
-            systemMenuItem.Click += (s, e) => ShowSystemContextMenu(filePath, location);
-
-            customMenu.Items.AddRange(new ToolStripItem[]
+            switch (e.CommandId)
             {
-                removeItem,
-                addItem,
-                new ToolStripSeparator(),
-                systemMenuItem
-            });
-            customMenu.Show(location);
+                case ID_REMOVE:
+                    HandleRemoveFromFence(e.FilePath);
+                    break;
+
+                case ID_BACK_TO_DESKTOP:
+                    HandleMoveToDesktop(e.FilePath);
+                    break;
+            }
         }
-
-        private void OnBackToDesktop(FenceWindow fenceWindow, CustomMenuEventArgs customMenuEventArgs)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void ShowSystemContextMenu(string filePath, Point location)
-        {
-            ShellContextMenu shellMenu = new ShellContextMenu();
-            shellMenu.ShowContextMenu(
-                new[] { new FileInfo(filePath) },
-                location
-            );
-        }
-
-
-
-
-
-
-
-
-        private void OnRemoveFromFence(object sender, CustomMenuEventArgs e)
+        private void HandleRemoveFromFence(string filePath)
         {
             try
             {
-                var filePath = e.FilePath;
                 if (string.IsNullOrEmpty(filePath))
                 {
                     logger.Warning("Remove from fence called with empty file path", "FenceWindow");
@@ -1043,6 +1067,28 @@ namespace Fenceless
             }
         }
 
+        private void HandleMoveToDesktop(string filePath)
+        {
+            try
+            {
+                string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                string fileName = Path.GetFileName(filePath);
+                string destPath = Path.Combine(desktopPath, fileName);
+
+                if (File.Exists(filePath))
+                {
+                    File.Move(filePath, destPath); 
+                    _fenceInfo.Files.Remove(filePath); 
+                    this.Refresh();
+                    logger.Info($"Moved to desktop: {fileName}");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Fail move to desktop: " + ex.Message);
+            }
+        }
+              
         private void FenceWindow_MouseWheel(object sender, MouseEventArgs e)
         {
             if (scrollHeight < 1)

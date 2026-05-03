@@ -40,6 +40,7 @@ namespace Peter
         public delegate string CustomMenuProvider(string filePath);
         private CustomMenuProvider _customMenuProvider;
         private string _currentFilePath;
+        private string[] _customMenuWithSubItems;
 
         // Event for custom menu item selection
         public event EventHandler<CustomMenuEventArgs> CustomMenuItemSelected;
@@ -462,16 +463,20 @@ namespace Peter
             this.ShowContextMenu(pointScreen);
         }
 
-        /// <summary>
-        /// Shows the context menu
-        /// </summary>
-        /// <param name="files">FileInfos (should all be in same directory)</param>
-        /// <param name="pointScreen">Where to show the menu</param>
-        public void ShowContextMenu(FileInfo[] files, Point pointScreen)
+        public void ShowContextMenu(FileInfo[] files, Point pointScreen, string[] customMenuProvider = null)
         {
-            ShowContextMenu(files, pointScreen, null);
-        }
+            if (files != null && files.Length > 0)
+                _currentFilePath = files[0].FullName;
 
+            // Release all resources first.
+            ReleaseAll();
+            _arrPIDLs = GetPIDLs(files);
+            if (customMenuProvider != null && customMenuProvider.Length >= 2)
+            {
+                _customMenuWithSubItems = customMenuProvider;
+                ShowContextMenuWithSubItem(pointScreen);
+            }
+        }
         /// <summary>
         /// Shows the context menu
         /// </summary>
@@ -503,7 +508,6 @@ namespace Peter
         /// <summary>
         /// Shows the context menu
         /// </summary>
-        /// <param name="arrFI">FileInfos (should all be in same directory)</param>
         /// <param name="pointScreen">Where to show the menu</param>
         private void ShowContextMenu(Point pointScreen)
         {
@@ -621,6 +625,133 @@ namespace Peter
                 ReleaseAll();
             }
         }
+        private void ShowContextMenuWithSubItem(Point pointScreen)
+        {
+            IntPtr pMenu = IntPtr.Zero,
+                iContextMenuPtr = IntPtr.Zero,
+                iContextMenuPtr2 = IntPtr.Zero,
+                iContextMenuPtr3 = IntPtr.Zero;
+
+            try
+            {
+                if (null == _arrPIDLs)
+                {
+                    ReleaseAll();
+                    return;
+                }
+
+                if (false == GetContextMenuInterfaces(_oParentFolder, _arrPIDLs, out iContextMenuPtr))
+                {
+                    ReleaseAll();
+                    return;
+                }
+
+                pMenu = CreatePopupMenu();
+
+                int nResult = _oContextMenu.QueryContextMenu(
+                    pMenu,
+                    0,
+                    CMD_FIRST,
+                    CMD_LAST,
+                    CMF.EXPLORE |
+                    CMF.NORMAL |
+                    ((Control.ModifierKeys & Keys.Shift) != 0 ? CMF.EXTENDEDVERBS : 0));
+
+                // Add custom menu items if provider is set
+                if (_customMenuWithSubItems != null && !string.IsNullOrEmpty(_currentFilePath))
+                {
+                    try
+                    {
+                        var customMenuItemText = _customMenuWithSubItems[0];
+                        if (!string.IsNullOrEmpty(customMenuItemText))
+                        {
+                            // 1. creath sub menu handle
+                            IntPtr hSubMenu = CreatePopupMenu();
+
+                            // 2. add items to sub menu, set ID form  CMD_LAST + 1
+                            for (int ii = 1; ii < _customMenuWithSubItems.Length; ii++)
+                            {
+                                var subItemInfo = new MENUITEMINFO(_customMenuWithSubItems[ii])
+                                {
+                                    fMask = MIIM.ID | MIIM.STRING | MIIM.STATE,
+                                    wID = CMD_LAST + (uint)ii
+                                };
+                                InsertMenuItem(hSubMenu, 0, true, ref subItemInfo);
+                            }
+
+                            // 3. add separtor
+                            InsertMenuItem(pMenu, 0, true, new MENUITEMINFO { fMask = MIIM.TYPE, fType = MFT.SEPARATOR });
+
+                            // 4. create father menu , add sub item
+                            var parentItemInfo = new MENUITEMINFO(customMenuItemText) // father menu name
+                            {
+                                fMask = MIIM.STRING | MIIM.SUBMENU | MIIM.STATE,
+                                hSubMenu = hSubMenu // link to sub menu
+                            };
+                            InsertMenuItem(pMenu, 0, true, ref parentItemInfo);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Instance?.Error($"Failed to add custom submenu: {ex.Message}", "ShellContextMenu");
+                    }
+                }
+
+                Marshal.QueryInterface(iContextMenuPtr, ref IID_IContextMenu2, out iContextMenuPtr2);
+                Marshal.QueryInterface(iContextMenuPtr, ref IID_IContextMenu3, out iContextMenuPtr3);
+
+                _oContextMenu2 = (IContextMenu2)Marshal.GetTypedObjectForIUnknown(iContextMenuPtr2, typeof(IContextMenu2));
+                _oContextMenu3 = (IContextMenu3)Marshal.GetTypedObjectForIUnknown(iContextMenuPtr3, typeof(IContextMenu3));
+
+                uint nSelected = TrackPopupMenuEx(
+                    pMenu,
+                    TPM.RETURNCMD,
+                    pointScreen.X,
+                    pointScreen.Y,
+                    this.Handle,
+                    IntPtr.Zero);
+
+                DestroyMenu(pMenu);
+                pMenu = IntPtr.Zero;
+
+                if (nSelected != 0)
+                {
+                    // Check if this is our custom command
+                    if (nSelected > CMD_LAST)
+                    {
+                        // send nSelected (like  CMD_LAST + 1 et.)
+                        OnCustomMenuItemSelected(_currentFilePath, nSelected);
+                    }
+                    else
+                    {
+                        InvokeCommand(_oContextMenu, nSelected, _strParentFolder, pointScreen);
+                    }
+                }
+            }
+            catch
+            {
+                throw;
+            }
+            finally
+            {
+                //hook.Uninstall();
+                if (pMenu != IntPtr.Zero)
+                {
+                    DestroyMenu(pMenu);
+                }
+
+                if (iContextMenuPtr != IntPtr.Zero)
+                    Marshal.Release(iContextMenuPtr);
+
+                if (iContextMenuPtr2 != IntPtr.Zero)
+                    Marshal.Release(iContextMenuPtr2);
+
+                if (iContextMenuPtr3 != IntPtr.Zero)
+                    Marshal.Release(iContextMenuPtr3);
+
+                ReleaseAll();
+            }
+        }
         #endregion
 
         /// <summary>
@@ -629,9 +760,12 @@ namespace Peter
         /// <param name="filePath">The file path that was selected</param>
         protected virtual void OnCustomMenuItemSelected(string filePath)
         {
-            CustomMenuItemSelected?.Invoke(this, new CustomMenuEventArgs(filePath));
+            CustomMenuItemSelected?.Invoke(this, new CustomMenuEventArgs(filePath,0));
         }
-
+        protected virtual void OnCustomMenuItemSelected(string filePath, uint commandId)
+        {
+            CustomMenuItemSelected?.Invoke(this, new CustomMenuEventArgs(filePath, commandId));
+        }
         #region Local variabled
         private IContextMenu _oContextMenu;
         private IContextMenu2 _oContextMenu2;
@@ -1672,10 +1806,11 @@ namespace Peter
     public class CustomMenuEventArgs : EventArgs
     {
         public string FilePath { get; }
-
-        public CustomMenuEventArgs(string filePath)
+        public uint CommandId { get; }
+        public CustomMenuEventArgs(string filePath, uint commandId)
         {
             FilePath = filePath;
+            CommandId = commandId;
         }
     }
     #endregion
