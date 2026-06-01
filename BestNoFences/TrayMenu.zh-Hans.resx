@@ -165,4 +165,13 @@
   <data name="Shortcut" xml:space="preserve">
     <value>快捷方式</value>
   </data>
+  <data name="FenceIconManage" xml:space="preserve">
+    <value>Fenceless图标管理</value>
+  </data>
+  <data name="FenceIconBackToDesktop" xml:space="preserve">
+    <value>发送回桌面</value>
+  </data>
+  <data name="FenceIconRemove" xml:space="preserve">
+    <value>删除快捷方式</value>
+  </data>
 </root>

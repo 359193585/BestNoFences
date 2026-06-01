@@ -75,6 +75,7 @@ namespace Fenceless
         private FenceWindowBehavior _behaviorManager;
 
         private bool IsDebugDnD = false;
+        private static readonly ResourceManager _resManager = new ResourceManager("Fenceless.TrayMenu", typeof(Program).Assembly);
 
         public FenceWindow(FenceInfo fenceInfo)
         {
@@ -966,11 +967,17 @@ namespace Fenceless
                 //);
 
                 // show menu with sub item, string[0] is father menu ,and other is subitem
+                //shellContextMenu.ShowContextMenu(
+                //   [new FileInfo(hoveringItem)],
+                //   MousePosition,
+                //   ["Fenless manage", "Remove from fence", "Back to desktop"]
                 shellContextMenu.ShowContextMenu(
-                   [new FileInfo(hoveringItem)],
-                   MousePosition,
-                   ["Fenless manage", "Remove from fence", "Back to desktop"]
-               );
+                  [new FileInfo(hoveringItem)],
+                  MousePosition,
+                  [GetText("FenceIconManage"), GetText("FenceIconRemove"), GetText("FenceIconBackToDesktop")]
+
+
+              );
             }
             else
             {
@@ -1299,6 +1306,10 @@ namespace Fenceless
         }
 
         #endregion
+        private static string GetText(string key)
+        {
+            return _resManager.GetString(key) ?? key;
+        }
     }
 }
 

@@ -61,6 +61,33 @@ namespace Fenceless {
         }
         
         /// <summary>
+        ///   查找类似 Fence Icon Back To Desktop 的本地化字符串。
+        /// </summary>
+        internal static string FenceIconBackToDesktop {
+            get {
+                return ResourceManager.GetString("FenceIconBackToDesktop", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Fence Icon Manage 的本地化字符串。
+        /// </summary>
+        internal static string FenceIconManage {
+            get {
+                return ResourceManager.GetString("FenceIconManage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Fence Icon Remove 的本地化字符串。
+        /// </summary>
+        internal static string FenceIconRemove {
+            get {
+                return ResourceManager.GetString("FenceIconRemove", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   查找类似 Add Fence 的本地化字符串。
         /// </summary>
         internal static string MenuAddFence {

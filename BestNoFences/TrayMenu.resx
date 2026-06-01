@@ -165,4 +165,13 @@
   <data name="Shortcut" xml:space="preserve">
     <value>Shortcut</value>
   </data>
+  <data name="FenceIconManage" xml:space="preserve">
+    <value>Fence Icon Manage</value>
+  </data>
+  <data name="FenceIconBackToDesktop" xml:space="preserve">
+    <value>Fence Icon Back To Desktop</value>
+  </data>
+  <data name="FenceIconRemove" xml:space="preserve">
+    <value>Fence Icon Remove</value>
+  </data>
 </root>
