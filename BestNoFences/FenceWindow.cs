@@ -967,10 +967,6 @@ namespace Fenceless
                 //);
 
                 // show menu with sub item, string[0] is father menu ,and other is subitem
-                //shellContextMenu.ShowContextMenu(
-                //   [new FileInfo(hoveringItem)],
-                //   MousePosition,
-                //   ["Fenless manage", "Remove from fence", "Back to desktop"]
                 shellContextMenu.ShowContextMenu(
                   [new FileInfo(hoveringItem)],
                   MousePosition,

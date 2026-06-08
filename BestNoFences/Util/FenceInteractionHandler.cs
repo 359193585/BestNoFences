@@ -268,14 +268,15 @@ namespace Fenceless.Util
                         }
                         #endregion
                     }
-                    else  // not a .lnk file, like .exe file, create new link file in  user appdata
+                    else  // not  .lnk file, like .exe file, create new link file in  user appdata
                     {
 
                         var lnk = new LnkFileManager
                         {
                             TargetFilePath = file,
                             ShortcutFilePath = AppSettings.Instance.appDataPath + "\\shortcutbak",
-                            ShortcutName = Path.GetFileName(file)+ " - " + GetText("Shortcut"),
+                            ShortcutName = Path.GetFileNameWithoutExtension(file)+ " - " + GetText("Shortcut"),
+                            //ShortcutName = Path.GetFileName(file)+ " - " + GetText("Shortcut"),
                             Description ="shortcut create by bestnofences",
                             WorkingDirectory=Path.GetDirectoryName(file)
                         };
